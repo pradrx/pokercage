@@ -4,6 +4,8 @@ import type { GameEventType } from "@/generated/prisma/client";
 export async function createGameEvent(params: {
   type: GameEventType;
   gameId: string;
+  actorId?: string;
+  actorName?: string;
   playerName?: string;
   detail: string;
   oldValue?: string | null;
@@ -13,6 +15,8 @@ export async function createGameEvent(params: {
     data: {
       type: params.type,
       gameId: params.gameId,
+      actorId: params.actorId ?? null,
+      actorName: params.actorName ?? null,
       playerName: params.playerName ?? null,
       detail: params.detail,
       oldValue: params.oldValue ?? null,

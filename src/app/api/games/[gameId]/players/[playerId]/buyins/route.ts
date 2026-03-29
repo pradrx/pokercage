@@ -54,6 +54,8 @@ export async function POST(
     await createGameEvent({
       type: "BUYIN_ADDED",
       gameId,
+      actorId: session.user.id,
+      actorName: session.user.name ?? undefined,
       playerName: player.name,
       detail: `${player.name} added a $${amount} buyin`,
       newValue: String(amount),

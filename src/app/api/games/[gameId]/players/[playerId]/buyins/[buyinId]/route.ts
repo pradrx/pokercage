@@ -42,6 +42,8 @@ export async function DELETE(
     await createGameEvent({
       type: "BUYIN_REMOVED",
       gameId,
+      actorId: session.user.id,
+      actorName: session.user.name ?? undefined,
       playerName: buyin.player.name,
       detail: `${buyin.player.name}'s $${buyin.amount} buyin removed`,
       oldValue: String(buyin.amount),

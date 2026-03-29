@@ -65,6 +65,8 @@ export async function PATCH(request: Request, { params }: Params) {
   await createGameEvent({
     type: eventType,
     gameId,
+    actorId: session.user.id,
+    actorName: session.user.name ?? undefined,
     playerName: existing.name,
     detail,
     oldValue: oldCashout !== null ? String(oldCashout) : null,
@@ -102,6 +104,8 @@ export async function DELETE(_request: Request, { params }: Params) {
     await createGameEvent({
       type: "PLAYER_REMOVED",
       gameId,
+      actorId: session.user.id,
+      actorName: session.user.name ?? undefined,
       playerName: player.name,
       detail: `${player.name} removed from the game`,
       oldValue: player.name,

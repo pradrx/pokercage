@@ -86,6 +86,8 @@ export async function POST(request: Request) {
   await createGameEvent({
     type: "GAME_CREATED",
     gameId: game.id,
+    actorId: session.user.id,
+    actorName: session.user.name ?? undefined,
     detail: `Game "${name}" created`,
     newValue: name,
   });
@@ -95,6 +97,8 @@ export async function POST(request: Request) {
     await createGameEvent({
       type: "PLAYER_ADDED",
       gameId: game.id,
+      actorId: session.user.id,
+      actorName: session.user.name ?? undefined,
       playerName: player.name,
       detail: `${player.name} joined the game`,
       newValue: player.name,

@@ -83,6 +83,8 @@ export async function POST(
   await createGameEvent({
     type: "GAME_COMPLETED",
     gameId,
+    actorId: session.user.id,
+    actorName: session.user.name ?? undefined,
     detail,
     oldValue: "ACTIVE",
     newValue: "COMPLETED",

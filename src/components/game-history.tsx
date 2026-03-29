@@ -64,18 +64,28 @@ export function GameHistory({ events }: { events: GameEvent[] }) {
                     <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <div>
                       <p className="text-sm">{event.detail}</p>
-                      <time
-                        suppressHydrationWarning
-                        className="text-xs text-muted-foreground"
-                        title={format(
-                          new Date(event.createdAt),
-                          "MMM d, yyyy h:mm a"
+                      <div className="flex items-center gap-1.5">
+                        {event.actorName && (
+                          <span className="text-xs text-muted-foreground">
+                            by {event.actorName}
+                          </span>
                         )}
-                      >
-                        {formatDistanceToNow(new Date(event.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </time>
+                        {event.actorName && (
+                          <span className="text-xs text-muted-foreground">·</span>
+                        )}
+                        <time
+                          suppressHydrationWarning
+                          className="text-xs text-muted-foreground"
+                          title={format(
+                            new Date(event.createdAt),
+                            "MMM d, yyyy h:mm a"
+                          )}
+                        >
+                          {formatDistanceToNow(new Date(event.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </time>
+                      </div>
                     </div>
                   </div>
                 </li>
