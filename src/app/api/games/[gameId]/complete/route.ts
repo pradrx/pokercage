@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createGameEvent } from "@/lib/game-events";
 import { canEditGame } from "@/lib/auth-helpers";
+import { buildPlayerBalances, canAdjustBalances } from "@/lib/payout";
 
 export async function POST(
   _request: Request,
@@ -54,18 +55,12 @@ export async function POST(
     );
   }
 
-  const totalBuyins = game.players.reduce(
-    (sum, p) => sum + p.buyins.reduce((s, b) => s + b.amount, 0),
-    0
-  );
-  const totalCashouts = game.players.reduce(
-    (sum, p) => sum + (p.cashout ?? 0),
-    0
-  );
+  const balances = buildPlayerBalances(game.players);
+  const delta = Math.round(balances.reduce((s, p) => s + p.balance, 0) * 100) / 100;
 
-  if (Math.abs(totalBuyins - totalCashouts) >= 0.01) {
+  if (Math.abs(delta) >= 0.01 && !canAdjustBalances(balances)) {
     return NextResponse.json(
-      { error: "Ledger is not balanced. Total buyins must equal total cashouts." },
+      { error: "Ledger is not balanced and all players are on the same side. Cannot auto-adjust." },
       { status: 422 }
     );
   }
@@ -80,10 +75,15 @@ export async function POST(
     },
   });
 
+  const detail =
+    Math.abs(delta) < 0.01
+      ? "Game marked as completed"
+      : `Game marked as completed (ledger adjusted by ${delta > 0 ? "+" : ""}${delta})`;
+
   await createGameEvent({
     type: "GAME_COMPLETED",
     gameId,
-    detail: "Game marked as completed",
+    detail,
     oldValue: "ACTIVE",
     newValue: "COMPLETED",
   });

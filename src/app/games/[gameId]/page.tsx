@@ -13,7 +13,11 @@ import { GameHistory } from "@/components/game-history";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { calculatePayouts, type PlayerBalance } from "@/lib/payout";
+import {
+  calculatePayouts,
+  adjustBalances,
+  buildPlayerBalances,
+} from "@/lib/payout";
 import { buildPaymentInfoMap } from "@/lib/payment";
 import { canViewGame, canEditGame } from "@/lib/auth-helpers";
 import type { GameWithPlayersAndEvents, GroupMemberWithUser } from "@/lib/types";
@@ -83,15 +87,12 @@ export default async function GamePage({
     ) as GroupMemberWithUser[];
   }
 
+  const rawBalances = buildPlayerBalances(game.players);
+  const adjustmentResult = adjustBalances(rawBalances);
+  const wasAdjusted = Math.abs(adjustmentResult.delta) >= 0.01;
   const payouts =
     game.status === "COMPLETED"
-      ? calculatePayouts(
-          game.players.map((p): PlayerBalance => ({
-            name: p.name,
-            balance:
-              (p.cashout ?? 0) - p.buyins.reduce((s, b) => s + b.amount, 0),
-          }))
-        )
+      ? calculatePayouts(adjustmentResult.adjusted)
       : [];
 
   const paymentInfoMap = buildPaymentInfoMap(game.players);
@@ -162,6 +163,14 @@ export default async function GamePage({
                 <CardTitle className="text-base">Payouts</CardTitle>
               </CardHeader>
               <CardContent>
+                {wasAdjusted && (
+                  <p className="mb-3 text-sm text-muted-foreground">
+                    Balances were proportionally adjusted to account for a
+                    ledger imbalance of{" "}
+                    {adjustmentResult.delta > 0 ? "+" : ""}
+                    {adjustmentResult.delta}.
+                  </p>
+                )}
                 <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} />
               </CardContent>
             </Card>
