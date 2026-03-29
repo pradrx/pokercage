@@ -75,15 +75,25 @@ export async function PATCH(
     }
   }
 
-  // Payment info changes require OWNER or ADMIN
+  // Payment info: admins can edit guests; users can edit only their own
   if (hasPaymentUpdate) {
-    try {
-      await requireGroupAdmin(groupId, session.user.id);
-    } catch (e) {
-      if (e instanceof AuthError) {
-        return NextResponse.json({ error: e.message }, { status: e.status });
+    const isGuest = !target.userId;
+    const isSelf = target.userId === session.user.id;
+
+    if (isGuest) {
+      try {
+        await requireGroupAdmin(groupId, session.user.id);
+      } catch (e) {
+        if (e instanceof AuthError) {
+          return NextResponse.json({ error: e.message }, { status: e.status });
+        }
+        throw e;
       }
-      throw e;
+    } else if (!isSelf) {
+      return NextResponse.json(
+        { error: "Cannot edit another user's payment info" },
+        { status: 403 }
+      );
     }
   }
 

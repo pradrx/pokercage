@@ -145,7 +145,8 @@ export function MemberList({
         {members.map((member) => {
           const isGuest = !member.userId;
           const displayName = member.user?.name ?? member.name;
-          const canManage = isAdmin && member.role !== "OWNER";
+          const canRemove = isAdmin && member.role !== "OWNER";
+          const canEditPayment = isAdmin && isGuest;
           const canTransfer =
             isOwner && !isGuest && member.id !== myMemberId;
 
@@ -176,7 +177,7 @@ export function MemberList({
                 </div>
               </div>
 
-              {(canManage || canTransfer) && (
+              {(canEditPayment || canRemove || canTransfer) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
@@ -186,24 +187,24 @@ export function MemberList({
                     }
                   />
                   <DropdownMenuContent align="end">
-                    {canManage && (
-                      <>
-                        <DropdownMenuItem
-                          onClick={() => openEditPayment(member)}
-                        >
-                          <CreditCard className="mr-2 h-4 w-4" />
-                          Edit Payment Info
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => removeMember(member.id)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Remove
-                        </DropdownMenuItem>
-                      </>
+                    {canEditPayment && (
+                      <DropdownMenuItem
+                        onClick={() => openEditPayment(member)}
+                      >
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        Edit Payment Info
+                      </DropdownMenuItem>
                     )}
-                    {canManage && canTransfer && <DropdownMenuSeparator />}
+                    {canRemove && (
+                      <DropdownMenuItem
+                        onClick={() => removeMember(member.id)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove
+                      </DropdownMenuItem>
+                    )}
+                    {(canEditPayment || canRemove) && canTransfer && <DropdownMenuSeparator />}
                     {canTransfer && (
                       <DropdownMenuItem
                         onClick={() => setTransferTarget(member)}
