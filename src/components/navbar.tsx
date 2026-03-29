@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { LogOut, Users } from "lucide-react";
+import { LogOut, Settings, Users } from "lucide-react";
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -42,6 +42,12 @@ export function Navbar() {
               </Avatar>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => (window.location.href = "/settings")}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => signOut({ callbackUrl: "/" })}
               >

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { calculatePayouts, type PlayerBalance } from "@/lib/payout";
+import { buildPaymentInfoMap } from "@/lib/payment";
 import type { GameWithPlayersAndEvents } from "@/lib/types";
 
 export default async function SharePage({
@@ -20,7 +21,15 @@ export default async function SharePage({
     where: { shareToken },
     include: {
       players: {
-        include: { buyins: { orderBy: { createdAt: "asc" } } },
+        include: {
+          buyins: { orderBy: { createdAt: "asc" } },
+          groupMember: {
+            select: {
+              venmo: true, zelle: true, cashapp: true, paypal: true,
+              user: { select: { venmo: true, zelle: true, cashapp: true, paypal: true } },
+            },
+          },
+        },
       },
       events: { orderBy: { createdAt: "desc" } },
       user: { select: { name: true } },
@@ -42,6 +51,8 @@ export default async function SharePage({
         }))
       )
     : [];
+
+  const paymentInfoMap = buildPaymentInfoMap(game.players);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -75,7 +86,7 @@ export default async function SharePage({
               <CardTitle className="text-base">Payouts</CardTitle>
             </CardHeader>
             <CardContent>
-              <PayoutList payouts={payouts} />
+              <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} />
             </CardContent>
           </Card>
         </>

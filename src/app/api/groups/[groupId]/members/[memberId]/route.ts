@@ -27,7 +27,12 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { role, name } = body;
+  const { role, name, venmo, zelle, cashapp, paypal } = body;
+  const hasPaymentUpdate =
+    venmo !== undefined ||
+    zelle !== undefined ||
+    cashapp !== undefined ||
+    paypal !== undefined;
 
   // Role changes require OWNER
   if (role !== undefined) {
@@ -70,9 +75,25 @@ export async function PATCH(
     }
   }
 
-  const data: Record<string, string> = {};
+  // Payment info changes require OWNER or ADMIN
+  if (hasPaymentUpdate) {
+    try {
+      await requireGroupAdmin(groupId, session.user.id);
+    } catch (e) {
+      if (e instanceof AuthError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
+    }
+  }
+
+  const data: Record<string, string | null> = {};
   if (role !== undefined) data.role = role;
   if (name !== undefined) data.name = name.trim();
+  if (venmo !== undefined) data.venmo = (typeof venmo === "string" && venmo.trim()) || null;
+  if (zelle !== undefined) data.zelle = (typeof zelle === "string" && zelle.trim()) || null;
+  if (cashapp !== undefined) data.cashapp = (typeof cashapp === "string" && cashapp.trim()) || null;
+  if (paypal !== undefined) data.paypal = (typeof paypal === "string" && paypal.trim()) || null;
 
   const updated = await prisma.groupMember.update({
     where: { id: memberId },

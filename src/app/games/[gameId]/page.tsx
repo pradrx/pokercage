@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { calculatePayouts, type PlayerBalance } from "@/lib/payout";
+import { buildPaymentInfoMap } from "@/lib/payment";
 import { canViewGame, canEditGame } from "@/lib/auth-helpers";
 import type { GameWithPlayersAndEvents, GroupMemberWithUser } from "@/lib/types";
 
@@ -33,7 +34,15 @@ export default async function GamePage({
     where: { id: gameId },
     include: {
       players: {
-        include: { buyins: { orderBy: { createdAt: "asc" } } },
+        include: {
+          buyins: { orderBy: { createdAt: "asc" } },
+          groupMember: {
+            select: {
+              venmo: true, zelle: true, cashapp: true, paypal: true,
+              user: { select: { venmo: true, zelle: true, cashapp: true, paypal: true } },
+            },
+          },
+        },
       },
       events: { orderBy: { createdAt: "desc" } },
       group: true,
@@ -84,6 +93,8 @@ export default async function GamePage({
           }))
         )
       : [];
+
+  const paymentInfoMap = buildPaymentInfoMap(game.players);
 
   return (
     <>
@@ -151,7 +162,7 @@ export default async function GamePage({
                 <CardTitle className="text-base">Payouts</CardTitle>
               </CardHeader>
               <CardContent>
-                <PayoutList payouts={payouts} />
+                <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} />
               </CardContent>
             </Card>
           </>

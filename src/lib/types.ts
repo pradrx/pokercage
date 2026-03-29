@@ -32,3 +32,10 @@ export type GroupWithMembers = Group & {
 export type GroupWithMemberCount = Group & {
   _count: { members: number };
 };
+
+export type PaymentInfo = {
+  venmo?: string | null;
+  zelle?: string | null;
+  cashapp?: string | null;
+  paypal?: string | null;
+};
