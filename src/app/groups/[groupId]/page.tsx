@@ -6,6 +6,7 @@ import { MemberList } from "@/components/member-list";
 import { AddMemberForm } from "@/components/add-member-form";
 import { GameList } from "@/components/game-list";
 import { CreateGroupGameDialog } from "@/components/create-group-game-dialog";
+import { InviteLinkManager } from "@/components/invite-link-manager";
 import { Separator } from "@/components/ui/separator";
 import type { GameWithPlayers, GroupMemberWithUser } from "@/lib/types";
 
@@ -68,6 +69,9 @@ export default async function GroupDetailPage({
         <section className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Members</h2>
+            {(myMembership.role === "OWNER" || myMembership.role === "ADMIN") && (
+              <InviteLinkManager groupId={groupId} />
+            )}
           </div>
           <AddMemberForm groupId={groupId} />
           <div className="mt-4">

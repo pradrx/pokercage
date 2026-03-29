@@ -126,9 +126,11 @@ export function MemberList({
               </Avatar>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{displayName}</span>
-                <Badge variant={roleBadgeVariant[member.role]}>
-                  {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
-                </Badge>
+                {!isGuest && (
+                  <Badge variant={roleBadgeVariant[member.role]}>
+                    {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
+                  </Badge>
+                )}
                 {isGuest && (
                   <Badge variant="outline" className="text-muted-foreground">
                     Guest

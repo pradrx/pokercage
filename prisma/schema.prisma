@@ -60,6 +60,7 @@ model User {
   sessions         Session[]
   games            Game[]
   groupMemberships GroupMember[]
+  groupInvites     GroupInvite[]
   createdAt        DateTime      @default(now())
 }
 
@@ -74,8 +75,24 @@ model Group {
   name      String
   members   GroupMember[]
   games     Game[]
+  invites   GroupInvite[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+}
+
+model GroupInvite {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  groupId   String
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy String
+  creator   User      @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([groupId])
+  @@index([code])
 }
 
 model GroupMember {
