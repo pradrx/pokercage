@@ -37,7 +37,7 @@ export function Navbar() {
               <Avatar className="h-8 w-8">
                 <AvatarImage src={session.user.image ?? undefined} />
                 <AvatarFallback>
-                  {session.user.name?.charAt(0)?.toUpperCase() ?? "U"}
+                  {(session.user.username ?? session.user.name)?.charAt(0)?.toUpperCase() ?? "U"}
                 </AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>

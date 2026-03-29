@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createGameEvent } from "@/lib/game-events";
+import { createGameEvent, actorDisplayName } from "@/lib/game-events";
 import { canEditGame } from "@/lib/auth-helpers";
 import { buildPlayerBalances, canAdjustBalances } from "@/lib/payout";
 
@@ -84,7 +84,7 @@ export async function POST(
     type: "GAME_COMPLETED",
     gameId,
     actorId: session.user.id,
-    actorName: session.user.name ?? undefined,
+    actorName: actorDisplayName(session),
     detail,
     oldValue: "ACTIVE",
     newValue: "COMPLETED",

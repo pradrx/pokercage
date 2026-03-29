@@ -13,7 +13,7 @@ export default async function SettingsPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { venmo: true, zelle: true, cashapp: true, paypal: true },
+    select: { username: true, venmo: true, zelle: true, cashapp: true, paypal: true },
   });
 
   return (
@@ -22,8 +22,19 @@ export default async function SettingsPage() {
       <div className="mx-auto max-w-xl px-4 py-8">
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Manage your payment info so others can easily settle up with you.
+          Manage your account and payment info.
         </p>
+
+        {user?.username && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-base">Username</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm font-mono">@{user.username}</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="mt-6">
           <CardHeader>

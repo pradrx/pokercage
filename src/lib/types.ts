@@ -10,6 +10,21 @@ import type {
 
 export type PlayerWithBuyins = Player & {
   buyins: Buyin[];
+  groupMember?: {
+    userId?: string | null;
+    venmo?: string | null;
+    zelle?: string | null;
+    cashapp?: string | null;
+    paypal?: string | null;
+    user?: {
+      username?: string | null;
+      name?: string | null;
+      venmo?: string | null;
+      zelle?: string | null;
+      cashapp?: string | null;
+      paypal?: string | null;
+    } | null;
+  } | null;
 };
 
 export type GameWithPlayers = Game & {
@@ -22,7 +37,7 @@ export type GameWithPlayersAndEvents = GameWithPlayers & {
 };
 
 export type GroupMemberWithUser = GroupMember & {
-  user: Pick<User, "id" | "name" | "email" | "image"> | null;
+  user: Pick<User, "id" | "name" | "email" | "image" | "username"> | null;
 };
 
 export type GroupWithMembers = Group & {

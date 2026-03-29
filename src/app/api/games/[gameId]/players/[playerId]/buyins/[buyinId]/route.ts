@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createGameEvent } from "@/lib/game-events";
+import { createGameEvent, actorDisplayName, playerDisplayName } from "@/lib/game-events";
 import { canEditGame } from "@/lib/auth-helpers";
 
 export async function DELETE(
@@ -39,13 +39,14 @@ export async function DELETE(
   await prisma.buyin.delete({ where: { id: buyinId } });
 
   if (buyin) {
+    const pName = await playerDisplayName(buyin.player.id);
     await createGameEvent({
       type: "BUYIN_REMOVED",
       gameId,
       actorId: session.user.id,
-      actorName: session.user.name ?? undefined,
-      playerName: buyin.player.name,
-      detail: `${buyin.player.name}'s $${buyin.amount} buyin removed`,
+      actorName: actorDisplayName(session),
+      playerName: pName,
+      detail: `${pName}'s $${buyin.amount} buyin removed`,
       oldValue: String(buyin.amount),
     });
   }

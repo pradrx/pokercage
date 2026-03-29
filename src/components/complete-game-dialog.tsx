@@ -29,6 +29,7 @@ import {
   canAdjustBalances,
   adjustBalances,
 } from "@/lib/payout";
+import { getDisplayName } from "@/lib/username";
 import type { GameWithPlayers } from "@/lib/types";
 
 function formatDelta(n: number): string {
@@ -52,7 +53,11 @@ export function CompleteGameDialog({ game }: { game: GameWithPlayers }) {
   const allCashedOut = game.players.every((p) => p.cashout !== null);
   const isBalanced = Math.abs(totalBuyins - totalCashouts) < 0.01;
 
-  const balances = buildPlayerBalances(game.players);
+  const displayPlayers = game.players.map((p) => ({
+    ...p,
+    name: getDisplayName(p),
+  }));
+  const balances = buildPlayerBalances(displayPlayers);
   const isAdjustable = !isBalanced && canAdjustBalances(balances);
   const adjustmentResult = isAdjustable ? adjustBalances(balances) : null;
 

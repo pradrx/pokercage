@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createGameEvent } from "@/lib/game-events";
+import { createGameEvent, actorDisplayName } from "@/lib/game-events";
+import { formatUsername } from "@/lib/username";
 import { requireGroupAdmin, AuthError } from "@/lib/auth-helpers";
 
 export async function GET() {
@@ -53,17 +54,23 @@ export async function POST(request: Request) {
 
   // Build player data from group member IDs if provided
   let playersCreate: { name: string; groupMemberId: string }[] = [];
+  const memberDisplayNames = new Map<string, string>();
   if (groupId && playerMemberIds?.length > 0) {
     const groupMembers = await prisma.groupMember.findMany({
       where: {
         id: { in: playerMemberIds },
         groupId,
       },
+      include: { user: { select: { username: true } } },
     });
     playersCreate = groupMembers.map((m) => ({
       name: m.name,
       groupMemberId: m.id,
     }));
+    // Build display name lookup for event logging
+    for (const m of groupMembers) {
+      memberDisplayNames.set(m.id, m.user?.username ? formatUsername(m.user.username) : m.name);
+    }
   }
 
   const game = await prisma.game.create({
@@ -83,25 +90,28 @@ export async function POST(request: Request) {
     },
   });
 
+  const actor = actorDisplayName(session);
+
   await createGameEvent({
     type: "GAME_CREATED",
     gameId: game.id,
     actorId: session.user.id,
-    actorName: session.user.name ?? undefined,
+    actorName: actor,
     detail: `Game "${name}" created`,
     newValue: name,
   });
 
   // Log player additions for group games
   for (const player of game.players) {
+    const pName = (player.groupMemberId && memberDisplayNames.get(player.groupMemberId)) || player.name;
     await createGameEvent({
       type: "PLAYER_ADDED",
       gameId: game.id,
       actorId: session.user.id,
-      actorName: session.user.name ?? undefined,
-      playerName: player.name,
-      detail: `${player.name} joined the game`,
-      newValue: player.name,
+      actorName: actor,
+      playerName: pName,
+      detail: `${pName} joined the game`,
+      newValue: pName,
     });
   }
 

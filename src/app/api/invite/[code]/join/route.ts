@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { formatUsername } from "@/lib/username";
 
 export async function POST(
   _request: Request,
@@ -35,10 +36,9 @@ export async function POST(
     });
   }
 
-  const name =
-    session.user.name ??
-    session.user.email?.split("@")[0] ??
-    "Unknown";
+  const name = session.user.username
+    ? formatUsername(session.user.username)
+    : (session.user.name ?? session.user.email?.split("@")[0] ?? "Unknown");
 
   try {
     await prisma.groupMember.create({

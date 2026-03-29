@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createGameEvent } from "@/lib/game-events";
+import { createGameEvent, actorDisplayName, playerDisplayName } from "@/lib/game-events";
 import { canEditGame } from "@/lib/auth-helpers";
 
 type Params = { params: Promise<{ gameId: string; playerId: string }> };
@@ -49,25 +49,27 @@ export async function PATCH(request: Request, { params }: Params) {
     include: { buyins: true },
   });
 
+  const pName = await playerDisplayName(playerId);
+
   let eventType: "CASHOUT_SET" | "CASHOUT_CHANGED" | "CASHOUT_CLEARED";
   let detail: string;
   if (oldCashout === null && newCashout !== null) {
     eventType = "CASHOUT_SET";
-    detail = `${existing.name}'s cashout set to $${newCashout}`;
+    detail = `${pName}'s cashout set to $${newCashout}`;
   } else if (oldCashout !== null && newCashout === null) {
     eventType = "CASHOUT_CLEARED";
-    detail = `${existing.name}'s cashout cleared (was $${oldCashout})`;
+    detail = `${pName}'s cashout cleared (was $${oldCashout})`;
   } else {
     eventType = "CASHOUT_CHANGED";
-    detail = `${existing.name}'s cashout changed from $${oldCashout} to $${newCashout}`;
+    detail = `${pName}'s cashout changed from $${oldCashout} to $${newCashout}`;
   }
 
   await createGameEvent({
     type: eventType,
     gameId,
     actorId: session.user.id,
-    actorName: session.user.name ?? undefined,
-    playerName: existing.name,
+    actorName: actorDisplayName(session),
+    playerName: pName,
     detail,
     oldValue: oldCashout !== null ? String(oldCashout) : null,
     newValue: newCashout !== null ? String(newCashout) : null,
@@ -96,21 +98,25 @@ export async function DELETE(_request: Request, { params }: Params) {
     where: { id: playerId, gameId },
   });
 
+  if (!player) {
+    return NextResponse.json({ error: "Player not found" }, { status: 404 });
+  }
+
+  const removedName = await playerDisplayName(playerId);
+
   await prisma.player.delete({
     where: { id: playerId, gameId },
   });
 
-  if (player) {
-    await createGameEvent({
-      type: "PLAYER_REMOVED",
-      gameId,
-      actorId: session.user.id,
-      actorName: session.user.name ?? undefined,
-      playerName: player.name,
-      detail: `${player.name} removed from the game`,
-      oldValue: player.name,
-    });
-  }
+  await createGameEvent({
+    type: "PLAYER_REMOVED",
+    gameId,
+    actorId: session.user.id,
+    actorName: actorDisplayName(session),
+    playerName: removedName,
+    detail: `${removedName} removed from the game`,
+    oldValue: removedName,
+  });
 
   return NextResponse.json({ success: true });
 }

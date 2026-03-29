@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createGameEvent } from "@/lib/game-events";
+import { createGameEvent, actorDisplayName } from "@/lib/game-events";
+import { formatUsername } from "@/lib/username";
 import { canEditGame } from "@/lib/auth-helpers";
 
 export async function POST(
@@ -33,12 +34,14 @@ export async function POST(
   const { name, groupMemberId } = body;
 
   let playerName: string;
+  let displayName: string;
   let linkedMemberId: string | undefined;
 
   if (groupMemberId && game.groupId) {
     // Adding an existing group member by ID
     const member = await prisma.groupMember.findFirst({
       where: { id: groupMemberId, groupId: game.groupId },
+      include: { user: { select: { username: true } } },
     });
     if (!member) {
       return NextResponse.json(
@@ -48,8 +51,10 @@ export async function POST(
     }
     playerName = member.name;
     linkedMemberId = member.id;
+    displayName = member.user?.username ? formatUsername(member.user.username) : member.name;
   } else if (name?.trim()) {
     playerName = name.trim();
+    displayName = playerName;
 
     // For group games, auto-create a guest in the group
     if (game.groupId) {
@@ -78,10 +83,10 @@ export async function POST(
     type: "PLAYER_ADDED",
     gameId,
     actorId: session.user.id,
-    actorName: session.user.name ?? undefined,
-    playerName,
-    detail: `${playerName} joined the game`,
-    newValue: playerName,
+    actorName: actorDisplayName(session),
+    playerName: displayName,
+    detail: `${displayName} joined the game`,
+    newValue: displayName,
   });
 
   return NextResponse.json(player, { status: 201 });

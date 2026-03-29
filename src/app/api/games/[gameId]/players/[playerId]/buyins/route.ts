@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createGameEvent } from "@/lib/game-events";
+import { createGameEvent, actorDisplayName, playerDisplayName } from "@/lib/game-events";
 import { canEditGame } from "@/lib/auth-helpers";
 
 export async function POST(
@@ -51,13 +51,14 @@ export async function POST(
   });
 
   if (player) {
+    const pName = await playerDisplayName(playerId);
     await createGameEvent({
       type: "BUYIN_ADDED",
       gameId,
       actorId: session.user.id,
-      actorName: session.user.name ?? undefined,
-      playerName: player.name,
-      detail: `${player.name} added a $${amount} buyin`,
+      actorName: actorDisplayName(session),
+      playerName: pName,
+      detail: `${pName} added a $${amount} buyin`,
       newValue: String(amount),
     });
   }

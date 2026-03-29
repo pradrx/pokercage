@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createGameEvent } from "@/lib/game-events";
+import { createGameEvent, actorDisplayName } from "@/lib/game-events";
 import { canEditGame } from "@/lib/auth-helpers";
 
 const REOPEN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -61,7 +61,7 @@ export async function POST(
     type: "GAME_REOPENED",
     gameId,
     actorId: session.user.id,
-    actorName: session.user.name ?? undefined,
+    actorName: actorDisplayName(session),
     detail: "Game reopened for editing",
     oldValue: "COMPLETED",
     newValue: "ACTIVE",

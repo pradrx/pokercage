@@ -21,9 +21,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { BuyinDialog } from "@/components/buyin-dialog";
 import { CashoutDialog } from "@/components/cashout-dialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { Trash2, X } from "lucide-react";
 import type { GameWithPlayers } from "@/lib/types";
+import { getDisplayName, getFullName, isGuestPlayer } from "@/lib/username";
 import { cn } from "@/lib/utils";
 
 export function LedgerTable({
@@ -133,7 +139,32 @@ export function LedgerTable({
 
           return (
             <TableRow key={player.id}>
-              <TableCell className="font-medium">{player.name}</TableCell>
+              <TableCell className="font-medium">
+                {(() => {
+                  const displayName = getDisplayName(player);
+                  const fullName = getFullName(player);
+                  const guest = isGuestPlayer(player);
+                  return (
+                    <span className="inline-flex items-center gap-1.5">
+                      {fullName ? (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <span className="cursor-help underline decoration-dotted underline-offset-4">
+                              {displayName}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{fullName}</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span>{displayName}</span>
+                      )}
+                      {guest && (
+                        <span className="text-xs text-muted-foreground">(guest)</span>
+                      )}
+                    </span>
+                  );
+                })()}
+              </TableCell>
               <TableCell>
                 <div className="flex flex-wrap items-center gap-1">
                   {player.buyins.map((buyin) => (
@@ -144,7 +175,7 @@ export function LedgerTable({
                       {buyin.amount}
                       {editable && (
                         <button
-                          onClick={() => setRemoveBuyinTarget({ playerId: player.id, buyinId: buyin.id, playerName: player.name, amount: buyin.amount })}
+                          onClick={() => setRemoveBuyinTarget({ playerId: player.id, buyinId: buyin.id, playerName: getDisplayName(player), amount: buyin.amount })}
                           className="ml-0.5 text-muted-foreground hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
@@ -189,7 +220,7 @@ export function LedgerTable({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => setRemovePlayerTarget({ id: player.id, name: player.name })}
+                    onClick={() => setRemovePlayerTarget({ id: player.id, name: getDisplayName(player) })}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-3 w-3" />

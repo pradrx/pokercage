@@ -21,6 +21,7 @@ import {
 } from "@/lib/payout";
 import { buildPaymentInfoMap } from "@/lib/payment";
 import { canViewGame, canEditGame } from "@/lib/auth-helpers";
+import { getDisplayName, buildFullNameMap } from "@/lib/username";
 import type { GameWithPlayersAndEvents, GroupMemberWithUser } from "@/lib/types";
 
 export default async function GamePage({
@@ -43,8 +44,9 @@ export default async function GamePage({
           buyins: { orderBy: { createdAt: "asc" } },
           groupMember: {
             select: {
+              userId: true,
               venmo: true, zelle: true, cashapp: true, paypal: true,
-              user: { select: { venmo: true, zelle: true, cashapp: true, paypal: true } },
+              user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
             },
           },
         },
@@ -81,7 +83,7 @@ export default async function GamePage({
     const members = await prisma.groupMember.findMany({
       where: { groupId: game.groupId },
       include: {
-        user: { select: { id: true, name: true, email: true, image: true } },
+        user: { select: { id: true, name: true, email: true, image: true, username: true } },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -96,7 +98,11 @@ export default async function GamePage({
     ) as GroupMemberWithUser[];
   }
 
-  const rawBalances = buildPlayerBalances(game.players);
+  const displayPlayers = game.players.map((p) => ({
+    ...p,
+    name: getDisplayName(p),
+  }));
+  const rawBalances = buildPlayerBalances(displayPlayers);
   const adjustmentResult = adjustBalances(rawBalances);
   const wasAdjusted = Math.abs(adjustmentResult.delta) >= 0.01;
   const payouts =
@@ -104,7 +110,8 @@ export default async function GamePage({
       ? calculatePayouts(adjustmentResult.adjusted)
       : [];
 
-  const paymentInfoMap = buildPaymentInfoMap(game.players);
+  const paymentInfoMap = buildPaymentInfoMap(displayPlayers);
+  const fullNameMap = buildFullNameMap(game.players);
 
   return (
     <>
@@ -181,7 +188,7 @@ export default async function GamePage({
                     {adjustmentResult.delta}.
                   </p>
                 )}
-                <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} />
+                <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} fullNameMap={fullNameMap} />
               </CardContent>
             </Card>
           </>

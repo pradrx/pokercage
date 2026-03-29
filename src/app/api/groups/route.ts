@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { formatUsername } from "@/lib/username";
 
 export async function GET() {
   const session = await auth();
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
       name: name.trim(),
       members: {
         create: {
-          name: session.user.name ?? "Unknown",
+          name: session.user.username ? formatUsername(session.user.username) : (session.user.name ?? "Unknown"),
           userId: session.user.id,
           role: "OWNER",
         },

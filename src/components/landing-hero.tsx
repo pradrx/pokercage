@@ -13,14 +13,11 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-const DEV_USERS = [
-  { name: "Alice", email: "alice@test.com" },
-  { name: "Bob", email: "bob@test.com" },
-  { name: "Charlie", email: "charlie@test.com" },
-  { name: "Diana", email: "diana@test.com" },
-];
-
-export function LandingHero() {
+export function LandingHero({
+  devUsers = [],
+}: {
+  devUsers?: { name: string; email: string }[];
+}) {
   const isDevAuth = process.env.NEXT_PUBLIC_DEV_AUTH === "true";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,7 +48,7 @@ export function LandingHero() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-2">
-                {DEV_USERS.map((u) => (
+                {devUsers.map((u) => (
                   <Button
                     key={u.email}
                     variant="outline"

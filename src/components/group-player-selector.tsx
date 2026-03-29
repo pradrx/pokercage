@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { UserPlus } from "lucide-react";
 import type { GroupMemberWithUser } from "@/lib/types";
+import { getMemberDisplayName } from "@/lib/username";
 
 export function GroupPlayerSelector({
   members,
@@ -61,7 +62,7 @@ export function GroupPlayerSelector({
       <div className="divide-y divide-border rounded-lg border max-h-64 overflow-y-auto">
         {members.map((member) => {
           const isGuest = !member.userId;
-          const displayName = member.user?.name ?? member.name;
+          const displayName = getMemberDisplayName(member);
 
           return (
             <label

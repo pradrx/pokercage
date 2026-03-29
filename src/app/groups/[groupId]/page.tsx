@@ -28,7 +28,7 @@ export default async function GroupDetailPage({
     include: {
       members: {
         include: {
-          user: { select: { id: true, name: true, email: true, image: true } },
+          user: { select: { id: true, name: true, email: true, image: true, username: true } },
         },
         orderBy: { createdAt: "asc" },
       },

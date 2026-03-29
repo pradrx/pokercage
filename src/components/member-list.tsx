@@ -25,6 +25,12 @@ import { toast } from "sonner";
 import { CreditCard, Crown, MoreVertical, Trash2 } from "lucide-react";
 import type { GroupMemberWithUser } from "@/lib/types";
 import type { GroupRole } from "@/generated/prisma/client";
+import { getMemberDisplayName, getMemberFullName } from "@/lib/username";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 const roleBadgeVariant: Record<GroupRole, "default" | "secondary" | "outline"> = {
   OWNER: "default",
@@ -153,7 +159,8 @@ export function MemberList({
       <div className="divide-y divide-border rounded-lg border">
         {members.map((member) => {
           const isGuest = !member.userId;
-          const displayName = member.user?.name ?? member.name;
+          const displayName = getMemberDisplayName(member);
+          const fullName = getMemberFullName(member);
           const canRemove = isAdmin && member.role !== "OWNER" && member.id !== myMemberId;
           const canEditPayment = isAdmin && isGuest;
           const canTransfer =
@@ -172,7 +179,18 @@ export function MemberList({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{displayName}</span>
+                  {fullName ? (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <span className="text-sm font-medium cursor-help underline decoration-dotted underline-offset-4">
+                          {displayName}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{fullName}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span className="text-sm font-medium">{displayName}</span>
+                  )}
                   {!isGuest && (
                     <Badge variant={roleBadgeVariant[member.role]}>
                       {member.role.charAt(0) + member.role.slice(1).toLowerCase()}
@@ -240,7 +258,7 @@ export function MemberList({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Edit Payment Info — {editingMember?.user?.name ?? editingMember?.name}
+              Edit Payment Info — {editingMember ? getMemberDisplayName(editingMember) : ""}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4">
@@ -303,7 +321,7 @@ export function MemberList({
           <p className="text-sm text-muted-foreground">
             Are you sure you want to remove{" "}
             <span className="font-medium text-foreground">
-              {removeTarget?.user?.name ?? removeTarget?.name}
+              {removeTarget ? getMemberDisplayName(removeTarget) : ""}
             </span>{" "}
             from this group?
           </p>
@@ -340,7 +358,7 @@ export function MemberList({
           <p className="text-sm text-muted-foreground">
             Are you sure you want to transfer group ownership to{" "}
             <span className="font-medium text-foreground">
-              {transferTarget?.user?.name ?? transferTarget?.name}
+              {transferTarget ? getMemberDisplayName(transferTarget) : ""}
             </span>
             ? You will become an Admin.
           </p>

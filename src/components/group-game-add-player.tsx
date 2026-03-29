@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { UserPlus, ChevronDown } from "lucide-react";
 import type { GroupMemberWithUser } from "@/lib/types";
+import { getMemberDisplayName } from "@/lib/username";
 
 export function GroupGameAddPlayer({
   gameId,
@@ -90,7 +91,7 @@ export function GroupGameAddPlayer({
           />
           <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
             {availableMembers.map((member) => {
-              const displayName = member.user?.name ?? member.name;
+              const displayName = getMemberDisplayName(member);
               const isGuest = !member.userId;
               return (
                 <DropdownMenuItem

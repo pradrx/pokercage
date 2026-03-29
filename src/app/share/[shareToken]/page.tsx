@@ -12,6 +12,7 @@ import {
   buildPlayerBalances,
 } from "@/lib/payout";
 import { buildPaymentInfoMap } from "@/lib/payment";
+import { getDisplayName, formatUsername, buildFullNameMap } from "@/lib/username";
 import type { GameWithPlayersAndEvents } from "@/lib/types";
 
 export default async function SharePage({
@@ -29,16 +30,17 @@ export default async function SharePage({
           buyins: { orderBy: { createdAt: "asc" } },
           groupMember: {
             select: {
+              userId: true,
               venmo: true, zelle: true, cashapp: true, paypal: true,
-              user: { select: { venmo: true, zelle: true, cashapp: true, paypal: true } },
+              user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
             },
           },
         },
       },
       events: { orderBy: { createdAt: "desc" } },
-      user: { select: { name: true } },
+      user: { select: { name: true, username: true } },
     },
-  })) as (GameWithPlayersAndEvents & { user: { name: string | null } }) | null;
+  })) as (GameWithPlayersAndEvents & { user: { name: string | null; username: string | null } }) | null;
 
   if (!game) {
     notFound();
@@ -46,14 +48,19 @@ export default async function SharePage({
 
   const isCompleted = game.status === "COMPLETED";
 
-  const rawBalances = buildPlayerBalances(game.players);
+  const displayPlayers = game.players.map((p) => ({
+    ...p,
+    name: getDisplayName(p),
+  }));
+  const rawBalances = buildPlayerBalances(displayPlayers);
   const adjustmentResult = adjustBalances(rawBalances);
   const wasAdjusted = Math.abs(adjustmentResult.delta) >= 0.01;
   const payouts = isCompleted
     ? calculatePayouts(adjustmentResult.adjusted)
     : [];
 
-  const paymentInfoMap = buildPaymentInfoMap(game.players);
+  const paymentInfoMap = buildPaymentInfoMap(displayPlayers);
+  const fullNameMap = buildFullNameMap(game.players);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -65,7 +72,8 @@ export default async function SharePage({
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
         {new Date(game.date).toLocaleDateString()}
-        {game.user.name && ` \u00b7 Hosted by ${game.user.name}`}
+        {(game.user.username || game.user.name) &&
+          ` \u00b7 Hosted by ${game.user.username ? formatUsername(game.user.username) : game.user.name}`}
       </p>
 
       <Separator className="my-6" />
@@ -95,7 +103,7 @@ export default async function SharePage({
                   {adjustmentResult.delta}.
                 </p>
               )}
-              <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} />
+              <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} fullNameMap={fullNameMap} />
             </CardContent>
           </Card>
         </>
