@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Plus,
   CheckCircle2,
+  RotateCcw,
   UserPlus,
   Trash2,
   X,
@@ -20,6 +21,7 @@ const eventConfig: Record<
 > = {
   GAME_CREATED: { icon: Plus, color: "bg-green-500" },
   GAME_COMPLETED: { icon: CheckCircle2, color: "bg-green-500" },
+  GAME_REOPENED: { icon: RotateCcw, color: "bg-yellow-500" },
   PLAYER_ADDED: { icon: UserPlus, color: "bg-blue-500" },
   PLAYER_REMOVED: { icon: Trash2, color: "bg-red-500" },
   BUYIN_ADDED: { icon: Plus, color: "bg-blue-500" },

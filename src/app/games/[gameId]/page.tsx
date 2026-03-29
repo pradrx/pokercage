@@ -7,6 +7,7 @@ import { LedgerTable } from "@/components/ledger-table";
 import { AddPlayerForm } from "@/components/add-player-form";
 import { GroupGameAddPlayer } from "@/components/group-game-add-player";
 import { CompleteGameDialog } from "@/components/complete-game-dialog";
+import { ReopenGameDialog } from "@/components/reopen-game-dialog";
 import { PayoutList } from "@/components/payout-list";
 import { ShareLinkButton } from "@/components/share-link-button";
 import { GameHistory } from "@/components/game-history";
@@ -66,6 +67,14 @@ export default async function GamePage({
   const isActive = game.status === "ACTIVE";
   const canEdit = isActive && hasEditAccess;
 
+  const REOPEN_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  const lastCompletedEvent = game.events.find((e) => e.type === "GAME_COMPLETED");
+  const canReopen =
+    game.status === "COMPLETED" &&
+    hasEditAccess &&
+    !!lastCompletedEvent &&
+    Date.now() - new Date(lastCompletedEvent.createdAt).getTime() < REOPEN_WINDOW_MS;
+
   // Load group members for the player selector if this is a group game
   let groupMembers: GroupMemberWithUser[] = [];
   if (game.groupId && canEdit) {
@@ -123,6 +132,7 @@ export default async function GamePage({
           <div className="flex items-center gap-2">
             <ShareLinkButton shareToken={game.shareToken} />
             {canEdit && <CompleteGameDialog game={game} />}
+            {canReopen && <ReopenGameDialog gameId={game.id} />}
           </div>
         </div>
 

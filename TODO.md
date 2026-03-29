@@ -1,10 +1,5 @@
 # Groups Feature — Follow-ups
 
-## Invite Links
-- [ ] Generate shareable invite link per group (like Discord)
-- [ ] Admins can regenerate/revoke the link
-- [ ] Anyone with the link can join the group as a MEMBER
-
 ## Guest Profile Claiming
 - [ ] Admin can link an existing guest profile to a newly joined user account
 - [ ] All historical ledger data (buyins, cashouts, deltas) carries over to the linked account
