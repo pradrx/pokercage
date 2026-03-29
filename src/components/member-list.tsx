@@ -55,6 +55,10 @@ export function MemberList({
   const [editPaypal, setEditPaypal] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Remove member confirmation state
+  const [removeTarget, setRemoveTarget] = useState<GroupMemberWithUser | null>(null);
+  const [removing, setRemoving] = useState(false);
+
   // Transfer ownership state
   const [transferTarget, setTransferTarget] = useState<GroupMemberWithUser | null>(null);
   const [transferring, setTransferring] = useState(false);
@@ -99,9 +103,11 @@ export function MemberList({
     }
   }
 
-  async function removeMember(memberId: string) {
+  async function confirmRemoveMember() {
+    if (!removeTarget) return;
+    setRemoving(true);
     try {
-      const res = await fetch(`/api/groups/${groupId}/members/${memberId}`, {
+      const res = await fetch(`/api/groups/${groupId}/members/${removeTarget.id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -109,9 +115,12 @@ export function MemberList({
         toast.error(data.error || "Failed to remove member");
         return;
       }
+      setRemoveTarget(null);
       router.refresh();
     } catch {
       toast.error("Failed to remove member");
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -145,7 +154,7 @@ export function MemberList({
         {members.map((member) => {
           const isGuest = !member.userId;
           const displayName = member.user?.name ?? member.name;
-          const canRemove = isAdmin && member.role !== "OWNER";
+          const canRemove = isAdmin && member.role !== "OWNER" && member.id !== myMemberId;
           const canEditPayment = isAdmin && isGuest;
           const canTransfer =
             isOwner && !isGuest && member.id !== myMemberId;
@@ -197,7 +206,7 @@ export function MemberList({
                     )}
                     {canRemove && (
                       <DropdownMenuItem
-                        onClick={() => removeMember(member.id)}
+                        onClick={() => setRemoveTarget(member)}
                         className="text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -275,6 +284,43 @@ export function MemberList({
           <DialogFooter>
             <Button onClick={savePaymentInfo} disabled={saving}>
               {saving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Dialog */}
+      <Dialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemoveTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Member</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to remove{" "}
+            <span className="font-medium text-foreground">
+              {removeTarget?.user?.name ?? removeTarget?.name}
+            </span>{" "}
+            from this group?
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRemoveTarget(null)}
+              disabled={removing}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmRemoveMember}
+              disabled={removing}
+            >
+              {removing ? "Removing..." : "Remove"}
             </Button>
           </DialogFooter>
         </DialogContent>

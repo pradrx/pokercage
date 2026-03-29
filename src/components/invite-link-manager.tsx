@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -56,6 +57,7 @@ export function InviteLinkManager({ groupId }: { groupId: string }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [ttlHours, setTtlHours] = useState("24");
 
@@ -100,6 +102,7 @@ export function InviteLinkManager({ groupId }: { groupId: string }) {
         return;
       }
       setInvite(null);
+      setConfirmRevoke(false);
       toast.success("Invite link revoked");
     } catch {
       toast.error("Failed to revoke invite link");
@@ -152,11 +155,10 @@ export function InviteLinkManager({ groupId }: { groupId: string }) {
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={handleRevoke}
-                disabled={revoking}
+                onClick={() => setConfirmRevoke(true)}
               >
                 <X className="mr-2 h-4 w-4" />
-                {revoking ? "Revoking..." : "Revoke"}
+                Revoke
               </Button>
             </div>
           </div>
@@ -185,6 +187,35 @@ export function InviteLinkManager({ groupId }: { groupId: string }) {
           </div>
         )}
       </DialogContent>
+
+      {/* Revoke Confirmation Dialog */}
+      <Dialog open={confirmRevoke} onOpenChange={setConfirmRevoke}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke Invite Link</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to revoke this invite link? Anyone with the
+            link will no longer be able to join.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmRevoke(false)}
+              disabled={revoking}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRevoke}
+              disabled={revoking}
+            >
+              {revoking ? "Revoking..." : "Revoke"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

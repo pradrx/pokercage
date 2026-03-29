@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -10,6 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { BuyinDialog } from "@/components/buyin-dialog";
 import { CashoutDialog } from "@/components/cashout-dialog";
@@ -27,30 +35,56 @@ export function LedgerTable({
 }) {
   const router = useRouter();
 
-  async function removePlayer(playerId: string) {
-    const res = await fetch(
-      `/api/games/${game.id}/players/${playerId}`,
-      { method: "DELETE" }
-    );
-    if (!res.ok) {
-      const data = await res.json();
-      toast.error(data.error || "Failed to remove player");
-      return;
+  // Remove player confirmation state
+  const [removePlayerTarget, setRemovePlayerTarget] = useState<{ id: string; name: string } | null>(null);
+  const [removingPlayer, setRemovingPlayer] = useState(false);
+
+  // Remove buyin confirmation state
+  const [removeBuyinTarget, setRemoveBuyinTarget] = useState<{ playerId: string; buyinId: string; playerName: string; amount: number } | null>(null);
+  const [removingBuyin, setRemovingBuyin] = useState(false);
+
+  async function confirmRemovePlayer() {
+    if (!removePlayerTarget) return;
+    setRemovingPlayer(true);
+    try {
+      const res = await fetch(
+        `/api/games/${game.id}/players/${removePlayerTarget.id}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to remove player");
+        return;
+      }
+      setRemovePlayerTarget(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to remove player");
+    } finally {
+      setRemovingPlayer(false);
     }
-    router.refresh();
   }
 
-  async function removeBuyin(playerId: string, buyinId: string) {
-    const res = await fetch(
-      `/api/games/${game.id}/players/${playerId}/buyins/${buyinId}`,
-      { method: "DELETE" }
-    );
-    if (!res.ok) {
-      const data = await res.json();
-      toast.error(data.error || "Failed to remove buyin");
-      return;
+  async function confirmRemoveBuyin() {
+    if (!removeBuyinTarget) return;
+    setRemovingBuyin(true);
+    try {
+      const res = await fetch(
+        `/api/games/${game.id}/players/${removeBuyinTarget.playerId}/buyins/${removeBuyinTarget.buyinId}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to remove buyin");
+        return;
+      }
+      setRemoveBuyinTarget(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to remove buyin");
+    } finally {
+      setRemovingBuyin(false);
     }
-    router.refresh();
   }
 
   const totals = game.players.reduce(
@@ -76,6 +110,7 @@ export function LedgerTable({
   }
 
   return (
+    <>
     <Table>
       <TableHeader>
         <TableRow>
@@ -109,7 +144,7 @@ export function LedgerTable({
                       {buyin.amount}
                       {editable && (
                         <button
-                          onClick={() => removeBuyin(player.id, buyin.id)}
+                          onClick={() => setRemoveBuyinTarget({ playerId: player.id, buyinId: buyin.id, playerName: player.name, amount: buyin.amount })}
                           className="ml-0.5 text-muted-foreground hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
@@ -154,7 +189,7 @@ export function LedgerTable({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => removePlayer(player.id)}
+                    onClick={() => setRemovePlayerTarget({ id: player.id, name: player.name })}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -185,5 +220,84 @@ export function LedgerTable({
         </TableRow>
       </TableFooter>
     </Table>
+
+    {/* Remove Player Dialog */}
+    <Dialog
+      open={removePlayerTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setRemovePlayerTarget(null);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Remove Player</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Are you sure you want to remove{" "}
+          <span className="font-medium text-foreground">
+            {removePlayerTarget?.name}
+          </span>{" "}
+          from this game? All their buyins and cashout data will be deleted.
+        </p>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setRemovePlayerTarget(null)}
+            disabled={removingPlayer}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={confirmRemovePlayer}
+            disabled={removingPlayer}
+          >
+            {removingPlayer ? "Removing..." : "Remove"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Remove Buyin Dialog */}
+    <Dialog
+      open={removeBuyinTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setRemoveBuyinTarget(null);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Remove Buyin</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Remove the{" "}
+          <span className="font-medium text-foreground">
+            {removeBuyinTarget?.amount}
+          </span>{" "}
+          buyin from{" "}
+          <span className="font-medium text-foreground">
+            {removeBuyinTarget?.playerName}
+          </span>
+          ?
+        </p>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setRemoveBuyinTarget(null)}
+            disabled={removingBuyin}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={confirmRemoveBuyin}
+            disabled={removingBuyin}
+          >
+            {removingBuyin ? "Removing..." : "Remove"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
