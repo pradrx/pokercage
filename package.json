@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": ". .env && DEV_AUTH=true NEXT_PUBLIC_DEV_AUTH=true DATABASE_URL=$TEST_DATABASE_URL next dev",
+    "dev:prod": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed": ". .env && DATABASE_URL=$TEST_DATABASE_URL tsx prisma/seed.ts",
+    "db:migrate": ". .env && DIRECT_DATABASE_URL=$TEST_DIRECT_DATABASE_URL npx prisma migrate deploy",
+    "db:migrate:prod": "npx prisma migrate deploy"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -41,6 +45,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
