@@ -84,6 +84,7 @@ export function BuyinDialog({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               autoFocus
+              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
           <Button type="submit" disabled={loading || !amount}>
