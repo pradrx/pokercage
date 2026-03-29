@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canViewGame } from "@/lib/auth-helpers";
 
 export async function GET(
   _request: Request,
@@ -26,7 +27,8 @@ export async function GET(
     return NextResponse.json({ error: "Game not found" }, { status: 404 });
   }
 
-  if (game.userId !== session.user.id) {
+  const hasAccess = await canViewGame(game, session.user.id);
+  if (!hasAccess) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

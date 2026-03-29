@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createGameEvent } from "@/lib/game-events";
+import { canEditGame } from "@/lib/auth-helpers";
 
 type Params = { params: Promise<{ gameId: string; playerId: string }> };
 
 async function getAuthorizedActiveGame(gameId: string, userId: string) {
   const game = await prisma.game.findUnique({ where: { id: gameId } });
-  if (!game || game.userId !== userId) return null;
+  if (!game) return null;
+  const hasAccess = await canEditGame(game, userId);
+  if (!hasAccess) return null;
   if (game.status !== "ACTIVE") return null;
   return game;
 }

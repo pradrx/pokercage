@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Users } from "lucide-react";
 import type { GameWithPlayers } from "@/lib/types";
 
 export function GameList({ games }: { games: GameWithPlayers[] }) {
@@ -36,11 +37,17 @@ export function GameList({ games }: { games: GameWithPlayers[] }) {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-4 text-sm text-muted-foreground">
-                  <span>
+                  <span suppressHydrationWarning>
                     {new Date(game.date).toLocaleDateString()}
                   </span>
                   <span>{game.players.length} players</span>
                   <span>Pot: {totalBuyins}</span>
+                  {game.group && (
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {game.group.name}
+                    </span>
+                  )}
                 </div>
               </CardContent>
             </Card>

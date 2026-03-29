@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
+import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { LedgerTable } from "@/components/ledger-table";
 import { AddPlayerForm } from "@/components/add-player-form";
+import { GroupGameAddPlayer } from "@/components/group-game-add-player";
 import { CompleteGameDialog } from "@/components/complete-game-dialog";
 import { PayoutList } from "@/components/payout-list";
 import { ShareLinkButton } from "@/components/share-link-button";
@@ -12,7 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { calculatePayouts, type PlayerBalance } from "@/lib/payout";
-import type { GameWithPlayersAndEvents } from "@/lib/types";
+import { canViewGame, canEditGame } from "@/lib/auth-helpers";
+import type { GameWithPlayersAndEvents, GroupMemberWithUser } from "@/lib/types";
 
 export default async function GamePage({
   params,
@@ -33,14 +36,43 @@ export default async function GamePage({
         include: { buyins: { orderBy: { createdAt: "asc" } } },
       },
       events: { orderBy: { createdAt: "desc" } },
+      group: true,
     },
-  })) as GameWithPlayersAndEvents | null;
+  })) as (GameWithPlayersAndEvents & { group: { id: string; name: string } | null }) | null;
 
-  if (!game || game.userId !== session.user.id) {
+  if (!game) {
     notFound();
   }
 
+  const hasViewAccess = await canViewGame(game, session.user.id);
+  if (!hasViewAccess) {
+    notFound();
+  }
+
+  const hasEditAccess = await canEditGame(game, session.user.id);
   const isActive = game.status === "ACTIVE";
+  const canEdit = isActive && hasEditAccess;
+
+  // Load group members for the player selector if this is a group game
+  let groupMembers: GroupMemberWithUser[] = [];
+  if (game.groupId && canEdit) {
+    const members = await prisma.groupMember.findMany({
+      where: { groupId: game.groupId },
+      include: {
+        user: { select: { id: true, name: true, email: true, image: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    // Filter out members already in this game
+    const existingMemberIds = new Set(
+      game.players
+        .map((p) => p.groupMemberId)
+        .filter((id): id is string => id !== null)
+    );
+    groupMembers = members.filter(
+      (m) => !existingMemberIds.has(m.id)
+    ) as GroupMemberWithUser[];
+  }
 
   const payouts =
     game.status === "COMPLETED"
@@ -57,6 +89,18 @@ export default async function GamePage({
     <>
       <Navbar />
       <div className="mx-auto max-w-4xl px-4 py-8">
+        {game.group && (
+          <div className="mb-2">
+            <Link
+              href={`/groups/${game.group.id}`}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {game.group.name}
+            </Link>
+            <span className="text-sm text-muted-foreground mx-1.5">/</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">{game.name}</h1>
@@ -66,7 +110,7 @@ export default async function GamePage({
           </div>
           <div className="flex items-center gap-2">
             <ShareLinkButton shareToken={game.shareToken} />
-            {isActive && <CompleteGameDialog game={game} />}
+            {canEdit && <CompleteGameDialog game={game} />}
           </div>
         </div>
 
@@ -76,9 +120,17 @@ export default async function GamePage({
 
         <Separator className="my-6" />
 
-        {isActive && (
+        {canEdit && (
           <div className="mb-4">
-            <AddPlayerForm gameId={game.id} />
+            {game.groupId ? (
+              <GroupGameAddPlayer
+                gameId={game.id}
+                groupId={game.groupId}
+                availableMembers={groupMembers}
+              />
+            ) : (
+              <AddPlayerForm gameId={game.id} />
+            )}
           </div>
         )}
 
@@ -87,7 +139,7 @@ export default async function GamePage({
             <CardTitle className="text-base">Ledger</CardTitle>
           </CardHeader>
           <CardContent>
-            <LedgerTable game={game} editable={isActive} />
+            <LedgerTable game={game} editable={canEdit} />
           </CardContent>
         </Card>
 

@@ -47,15 +47,47 @@ model VerificationToken {
 // Application models
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  games         Game[]
-  createdAt     DateTime  @default(now())
+  id               String        @id @default(cuid())
+  name             String?
+  email            String?       @unique
+  emailVerified    DateTime?
+  image            String?
+  accounts         Account[]
+  sessions         Session[]
+  games            Game[]
+  groupMemberships GroupMember[]
+  createdAt        DateTime      @default(now())
+}
+
+enum GroupRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Group {
+  id        String        @id @default(cuid())
+  name      String
+  members   GroupMember[]
+  games     Game[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model GroupMember {
+  id        String    @id @default(cuid())
+  name      String
+  groupId   String
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role      GroupRole @default(MEMBER)
+  players   Player[]
+  createdAt DateTime  @default(now())
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
 }
 
 enum GameStatus {
@@ -83,6 +115,8 @@ model Game {
   shareToken String     @unique @default(cuid())
   userId     String
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId    String?
+  group      Group?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
   players    Player[]
   events     GameEvent[]
   createdAt  DateTime   @default(now())
@@ -90,17 +124,21 @@ model Game {
 
   @@index([userId])
   @@index([shareToken])
+  @@index([groupId])
 }
 
 model Player {
-  id      String  @id @default(cuid())
-  name    String
-  cashout Float?
-  gameId  String
-  game    Game    @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  buyins  Buyin[]
+  id            String       @id @default(cuid())
+  name          String
+  cashout       Float?
+  gameId        String
+  game          Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  groupMemberId String?
+  groupMember   GroupMember? @relation(fields: [groupMemberId], references: [id], onDelete: SetNull)
+  buyins        Buyin[]
 
   @@index([gameId])
+  @@index([groupMemberId])
 }
 
 model Buyin {

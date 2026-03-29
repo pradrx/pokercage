@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createGameEvent } from "@/lib/game-events";
+import { canEditGame } from "@/lib/auth-helpers";
 
 export async function POST(
   _request: Request,
@@ -26,7 +27,9 @@ export async function POST(
   if (!game) {
     return NextResponse.json({ error: "Game not found" }, { status: 404 });
   }
-  if (game.userId !== session.user.id) {
+
+  const hasEditAccess = await canEditGame(game, session.user.id);
+  if (!hasEditAccess) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (game.status !== "ACTIVE") {

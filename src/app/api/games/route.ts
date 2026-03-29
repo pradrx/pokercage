@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createGameEvent } from "@/lib/game-events";
+import { requireGroupMember, AuthError } from "@/lib/auth-helpers";
 
 export async function GET() {
   const session = await auth();
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { name, date } = body;
+  const { name, date, groupId, playerMemberIds } = body;
 
   if (!name || !date) {
     return NextResponse.json(
@@ -38,11 +39,42 @@ export async function POST(request: Request) {
     );
   }
 
+  // If creating within a group, verify membership
+  if (groupId) {
+    try {
+      await requireGroupMember(groupId, session.user.id);
+    } catch (e) {
+      if (e instanceof AuthError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
+    }
+  }
+
+  // Build player data from group member IDs if provided
+  let playersCreate: { name: string; groupMemberId: string }[] = [];
+  if (groupId && playerMemberIds?.length > 0) {
+    const groupMembers = await prisma.groupMember.findMany({
+      where: {
+        id: { in: playerMemberIds },
+        groupId,
+      },
+    });
+    playersCreate = groupMembers.map((m) => ({
+      name: m.name,
+      groupMemberId: m.id,
+    }));
+  }
+
   const game = await prisma.game.create({
     data: {
       name,
       date: new Date(date),
       userId: session.user.id,
+      groupId: groupId || undefined,
+      players: playersCreate.length > 0
+        ? { create: playersCreate }
+        : undefined,
     },
     include: {
       players: {
@@ -57,6 +89,17 @@ export async function POST(request: Request) {
     detail: `Game "${name}" created`,
     newValue: name,
   });
+
+  // Log player additions for group games
+  for (const player of game.players) {
+    await createGameEvent({
+      type: "PLAYER_ADDED",
+      gameId: game.id,
+      playerName: player.name,
+      detail: `${player.name} joined the game`,
+      newValue: player.name,
+    });
+  }
 
   return NextResponse.json(game, { status: 201 });
 }

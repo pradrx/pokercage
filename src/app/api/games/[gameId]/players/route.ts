@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createGameEvent } from "@/lib/game-events";
+import { canEditGame } from "@/lib/auth-helpers";
 
 export async function POST(
   request: Request,
@@ -18,24 +19,57 @@ export async function POST(
   if (!game) {
     return NextResponse.json({ error: "Game not found" }, { status: 404 });
   }
-  if (game.userId !== session.user.id) {
+
+  const hasEditAccess = await canEditGame(game, session.user.id);
+  if (!hasEditAccess) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
   if (game.status !== "ACTIVE") {
     return NextResponse.json({ error: "Game is completed" }, { status: 400 });
   }
 
   const body = await request.json();
-  const { name } = body;
+  const { name, groupMemberId } = body;
 
-  if (!name?.trim()) {
+  let playerName: string;
+  let linkedMemberId: string | undefined;
+
+  if (groupMemberId && game.groupId) {
+    // Adding an existing group member by ID
+    const member = await prisma.groupMember.findFirst({
+      where: { id: groupMemberId, groupId: game.groupId },
+    });
+    if (!member) {
+      return NextResponse.json(
+        { error: "Group member not found" },
+        { status: 404 }
+      );
+    }
+    playerName = member.name;
+    linkedMemberId = member.id;
+  } else if (name?.trim()) {
+    playerName = name.trim();
+
+    // For group games, auto-create a guest in the group
+    if (game.groupId) {
+      const newMember = await prisma.groupMember.create({
+        data: {
+          name: playerName,
+          groupId: game.groupId,
+        },
+      });
+      linkedMemberId = newMember.id;
+    }
+  } else {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
   const player = await prisma.player.create({
     data: {
-      name: name.trim(),
+      name: playerName,
       gameId,
+      groupMemberId: linkedMemberId,
     },
     include: { buyins: true },
   });
@@ -43,9 +77,9 @@ export async function POST(
   await createGameEvent({
     type: "PLAYER_ADDED",
     gameId,
-    playerName: name.trim(),
-    detail: `${name.trim()} joined the game`,
-    newValue: name.trim(),
+    playerName,
+    detail: `${playerName} joined the game`,
+    newValue: playerName,
   });
 
   return NextResponse.json(player, { status: 201 });

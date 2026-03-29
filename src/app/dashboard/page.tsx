@@ -5,6 +5,8 @@ import { Navbar } from "@/components/navbar";
 import { GameList } from "@/components/game-list";
 import { CreateGameDialog } from "@/components/create-game-dialog";
 import { Separator } from "@/components/ui/separator";
+import { GroupList } from "@/components/group-list";
+import { CreateGroupDialog } from "@/components/create-group-dialog";
 import type { GameWithPlayers } from "@/lib/types";
 
 export default async function DashboardPage() {
@@ -13,12 +15,31 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
+  const memberships = await prisma.groupMember.findMany({
+    where: { userId: session.user.id },
+    include: {
+      group: {
+        include: {
+          _count: { select: { members: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const groups = memberships.map((m) => ({
+    ...m.group,
+    _count: m.group._count,
+    myRole: m.role,
+  }));
+
   const games = (await prisma.game.findMany({
     where: { userId: session.user.id },
     include: {
       players: {
         include: { buyins: true },
       },
+      group: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: "desc" },
   })) as GameWithPlayers[];
@@ -32,7 +53,7 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Your Games</h1>
-          <CreateGameDialog />
+          <CreateGameDialog groups={groups.map((g) => ({ id: g.id, name: g.name }))} />
         </div>
 
         {activeGames.length > 0 && (
@@ -60,6 +81,16 @@ export default async function DashboardPage() {
         {games.length === 0 && (
           <GameList games={[]} />
         )}
+
+        <Separator className="my-8" />
+
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Your Groups</h1>
+          <CreateGroupDialog />
+        </div>
+        <section className="mt-6">
+          <GroupList groups={groups} />
+        </section>
       </div>
     </>
   );
