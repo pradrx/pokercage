@@ -84,10 +84,12 @@ export default async function GroupDetailPage({
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">Games</h2>
-            <CreateGroupGameDialog
-              groupId={groupId}
-              members={group.members as GroupMemberWithUser[]}
-            />
+            {(myMembership.role === "OWNER" || myMembership.role === "ADMIN") && (
+              <CreateGroupGameDialog
+                groupId={groupId}
+                members={group.members as GroupMemberWithUser[]}
+              />
+            )}
           </div>
 
           {activeGames.length > 0 && (

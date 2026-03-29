@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { MoreVertical, Shield, ShieldOff, Trash2 } from "lucide-react";
+import { MoreVertical, Trash2 } from "lucide-react";
 import type { GroupMemberWithUser } from "@/lib/types";
 import type { GroupRole } from "@/generated/prisma/client";
 
@@ -31,26 +31,7 @@ export function MemberList({
   myRole: GroupRole;
 }) {
   const router = useRouter();
-  const isOwner = myRole === "OWNER";
   const isAdmin = myRole === "OWNER" || myRole === "ADMIN";
-
-  async function updateRole(memberId: string, role: GroupRole) {
-    try {
-      const res = await fetch(`/api/groups/${groupId}/members/${memberId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Failed to update role");
-        return;
-      }
-      router.refresh();
-    } catch {
-      toast.error("Failed to update role");
-    }
-  }
 
   async function removeMember(memberId: string) {
     try {
@@ -110,18 +91,6 @@ export function MemberList({
                   }
                 />
                 <DropdownMenuContent align="end">
-                  {isOwner && member.role === "MEMBER" && (
-                    <DropdownMenuItem onClick={() => updateRole(member.id, "ADMIN")}>
-                      <Shield className="mr-2 h-4 w-4" />
-                      Promote to Admin
-                    </DropdownMenuItem>
-                  )}
-                  {isOwner && member.role === "ADMIN" && (
-                    <DropdownMenuItem onClick={() => updateRole(member.id, "MEMBER")}>
-                      <ShieldOff className="mr-2 h-4 w-4" />
-                      Demote to Member
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuItem
                     onClick={() => removeMember(member.id)}
                     className="text-destructive"

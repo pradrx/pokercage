@@ -53,7 +53,7 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Your Games</h1>
-          <CreateGameDialog groups={groups.map((g) => ({ id: g.id, name: g.name }))} />
+          <CreateGameDialog groups={groups.filter((g) => g.myRole === "OWNER" || g.myRole === "ADMIN").map((g) => ({ id: g.id, name: g.name }))} />
         </div>
 
         {activeGames.length > 0 && (

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createGameEvent } from "@/lib/game-events";
-import { requireGroupMember, AuthError } from "@/lib/auth-helpers";
+import { requireGroupAdmin, AuthError } from "@/lib/auth-helpers";
 
 export async function GET() {
   const session = await auth();
@@ -39,10 +39,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // If creating within a group, verify membership
+  // If creating within a group, verify caller is owner or admin
   if (groupId) {
     try {
-      await requireGroupMember(groupId, session.user.id);
+      await requireGroupAdmin(groupId, session.user.id);
     } catch (e) {
       if (e instanceof AuthError) {
         return NextResponse.json({ error: e.message }, { status: e.status });
