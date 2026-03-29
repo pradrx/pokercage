@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createGameEvent } from "@/lib/game-events";
 
 export async function POST(
   _request: Request,
@@ -74,6 +75,14 @@ export async function POST(
         include: { buyins: true },
       },
     },
+  });
+
+  await createGameEvent({
+    type: "GAME_COMPLETED",
+    gameId,
+    detail: "Game marked as completed",
+    oldValue: "ACTIVE",
+    newValue: "COMPLETED",
   });
 
   return NextResponse.json(updatedGame);

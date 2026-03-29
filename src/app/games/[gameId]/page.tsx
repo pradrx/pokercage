@@ -7,11 +7,12 @@ import { AddPlayerForm } from "@/components/add-player-form";
 import { CompleteGameDialog } from "@/components/complete-game-dialog";
 import { PayoutList } from "@/components/payout-list";
 import { ShareLinkButton } from "@/components/share-link-button";
+import { GameHistory } from "@/components/game-history";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { calculatePayouts, type PlayerBalance } from "@/lib/payout";
-import type { GameWithPlayers } from "@/lib/types";
+import type { GameWithPlayersAndEvents } from "@/lib/types";
 
 export default async function GamePage({
   params,
@@ -31,8 +32,9 @@ export default async function GamePage({
       players: {
         include: { buyins: { orderBy: { createdAt: "asc" } } },
       },
+      events: { orderBy: { createdAt: "desc" } },
     },
-  })) as GameWithPlayers | null;
+  })) as GameWithPlayersAndEvents | null;
 
   if (!game || game.userId !== session.user.id) {
     notFound();
@@ -102,6 +104,9 @@ export default async function GamePage({
             </Card>
           </>
         )}
+
+        <Separator className="my-6" />
+        <GameHistory events={game.events} />
       </div>
     </>
   );

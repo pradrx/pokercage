@@ -2,11 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { LedgerTable } from "@/components/ledger-table";
 import { PayoutList } from "@/components/payout-list";
+import { GameHistory } from "@/components/game-history";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { calculatePayouts, type PlayerBalance } from "@/lib/payout";
-import type { GameWithPlayers } from "@/lib/types";
+import type { GameWithPlayersAndEvents } from "@/lib/types";
 
 export default async function SharePage({
   params,
@@ -21,9 +22,10 @@ export default async function SharePage({
       players: {
         include: { buyins: { orderBy: { createdAt: "asc" } } },
       },
+      events: { orderBy: { createdAt: "desc" } },
       user: { select: { name: true } },
     },
-  })) as (GameWithPlayers & { user: { name: string | null } }) | null;
+  })) as (GameWithPlayersAndEvents & { user: { name: string | null } }) | null;
 
   if (!game) {
     notFound();
@@ -78,6 +80,9 @@ export default async function SharePage({
           </Card>
         </>
       )}
+
+      <Separator className="my-6" />
+      <GameHistory events={game.events} />
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
         Poker Cage

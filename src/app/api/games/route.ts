@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createGameEvent } from "@/lib/game-events";
 
 export async function GET() {
   const session = await auth();
@@ -48,6 +49,13 @@ export async function POST(request: Request) {
         include: { buyins: true },
       },
     },
+  });
+
+  await createGameEvent({
+    type: "GAME_CREATED",
+    gameId: game.id,
+    detail: `Game "${name}" created`,
+    newValue: name,
   });
 
   return NextResponse.json(game, { status: 201 });

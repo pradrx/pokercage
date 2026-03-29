@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createGameEvent } from "@/lib/game-events";
 
 export async function POST(
   request: Request,
@@ -33,12 +34,26 @@ export async function POST(
     );
   }
 
+  const player = await prisma.player.findUnique({
+    where: { id: playerId, gameId },
+  });
+
   const buyin = await prisma.buyin.create({
     data: {
       amount,
       playerId,
     },
   });
+
+  if (player) {
+    await createGameEvent({
+      type: "BUYIN_ADDED",
+      gameId,
+      playerName: player.name,
+      detail: `${player.name} added a $${amount} buyin`,
+      newValue: String(amount),
+    });
+  }
 
   return NextResponse.json(buyin, { status: 201 });
 }

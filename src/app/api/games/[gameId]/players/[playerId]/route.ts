@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createGameEvent } from "@/lib/game-events";
 
 type Params = { params: Promise<{ gameId: string; playerId: string }> };
 
@@ -28,12 +29,43 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const body = await request.json();
-  const { cashout } = body;
+  const newCashout = body.cashout === null ? null : parseFloat(body.cashout);
+
+  const existing = await prisma.player.findUnique({
+    where: { id: playerId, gameId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Player not found" }, { status: 404 });
+  }
+
+  const oldCashout = existing.cashout;
 
   const player = await prisma.player.update({
     where: { id: playerId, gameId },
-    data: { cashout: cashout === null ? null : parseFloat(cashout) },
+    data: { cashout: newCashout },
     include: { buyins: true },
+  });
+
+  let eventType: "CASHOUT_SET" | "CASHOUT_CHANGED" | "CASHOUT_CLEARED";
+  let detail: string;
+  if (oldCashout === null && newCashout !== null) {
+    eventType = "CASHOUT_SET";
+    detail = `${existing.name}'s cashout set to $${newCashout}`;
+  } else if (oldCashout !== null && newCashout === null) {
+    eventType = "CASHOUT_CLEARED";
+    detail = `${existing.name}'s cashout cleared (was $${oldCashout})`;
+  } else {
+    eventType = "CASHOUT_CHANGED";
+    detail = `${existing.name}'s cashout changed from $${oldCashout} to $${newCashout}`;
+  }
+
+  await createGameEvent({
+    type: eventType,
+    gameId,
+    playerName: existing.name,
+    detail,
+    oldValue: oldCashout !== null ? String(oldCashout) : null,
+    newValue: newCashout !== null ? String(newCashout) : null,
   });
 
   return NextResponse.json(player);
@@ -55,9 +87,23 @@ export async function DELETE(_request: Request, { params }: Params) {
     );
   }
 
+  const player = await prisma.player.findUnique({
+    where: { id: playerId, gameId },
+  });
+
   await prisma.player.delete({
     where: { id: playerId, gameId },
   });
+
+  if (player) {
+    await createGameEvent({
+      type: "PLAYER_REMOVED",
+      gameId,
+      playerName: player.name,
+      detail: `${player.name} removed from the game`,
+      oldValue: player.name,
+    });
+  }
 
   return NextResponse.json({ success: true });
 }

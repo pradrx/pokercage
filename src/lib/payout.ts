@@ -41,5 +41,7 @@ export function calculatePayouts(players: PlayerBalance[]): Payout[] {
     if (creditors[j].balance < 0.01) j++;
   }
 
+  payouts.sort((a, b) => a.to.localeCompare(b.to));
+
   return payouts;
 }

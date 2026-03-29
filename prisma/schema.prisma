@@ -63,6 +63,18 @@ enum GameStatus {
   COMPLETED
 }
 
+enum GameEventType {
+  GAME_CREATED
+  GAME_COMPLETED
+  PLAYER_ADDED
+  PLAYER_REMOVED
+  BUYIN_ADDED
+  BUYIN_REMOVED
+  CASHOUT_SET
+  CASHOUT_CHANGED
+  CASHOUT_CLEARED
+}
+
 model Game {
   id         String     @id @default(cuid())
   name       String
@@ -72,6 +84,7 @@ model Game {
   userId     String
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   players    Player[]
+  events     GameEvent[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -98,4 +111,18 @@ model Buyin {
   createdAt DateTime @default(now())
 
   @@index([playerId])
+}
+
+model GameEvent {
+  id         String        @id @default(cuid())
+  type       GameEventType
+  gameId     String
+  game       Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  playerName String?
+  detail     String
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime      @default(now())
+
+  @@index([gameId, createdAt])
 }

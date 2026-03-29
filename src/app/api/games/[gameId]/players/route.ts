@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createGameEvent } from "@/lib/game-events";
 
 export async function POST(
   request: Request,
@@ -37,6 +38,14 @@ export async function POST(
       gameId,
     },
     include: { buyins: true },
+  });
+
+  await createGameEvent({
+    type: "PLAYER_ADDED",
+    gameId,
+    playerName: name.trim(),
+    detail: `${name.trim()} joined the game`,
+    newValue: name.trim(),
   });
 
   return NextResponse.json(player, { status: 201 });
