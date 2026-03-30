@@ -5,9 +5,12 @@ import { Navbar } from "@/components/navbar";
 import { GameList } from "@/components/game-list";
 import { CreateGameDialog } from "@/components/create-game-dialog";
 import { Separator } from "@/components/ui/separator";
-import { GroupList } from "@/components/group-list";
+import { DashboardGroupList } from "@/components/dashboard-group-list";
+import { RecentCompletedGames } from "@/components/recent-completed-games";
 import { CreateGroupDialog } from "@/components/create-group-dialog";
 import type { GameWithPlayers } from "@/lib/types";
+
+const MAX_COMPLETED_GAMES = 5;
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -15,8 +18,10 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
+  const userId = session.user.id;
+
   const memberships = await prisma.groupMember.findMany({
-    where: { userId: session.user.id },
+    where: { userId },
     include: {
       group: {
         include: {
@@ -36,8 +41,8 @@ export default async function DashboardPage() {
   const games = (await prisma.game.findMany({
     where: {
       OR: [
-        { userId: session.user.id },
-        { players: { some: { groupMember: { userId: session.user.id } } } },
+        { userId },
+        { players: { some: { groupMember: { userId } } } },
       ],
     },
     include: {
@@ -49,53 +54,91 @@ export default async function DashboardPage() {
     orderBy: { createdAt: "desc" },
   })) as GameWithPlayers[];
 
-  const activeGames = games.filter((g) => g.status === "ACTIVE");
+  // Group active games by their groupId for nesting under group cards
+  const gamesByGroup: Record<string, GameWithPlayers[]> = {};
+  const standaloneActiveGames: GameWithPlayers[] = [];
+
+  for (const game of games) {
+    if (game.status !== "ACTIVE") continue;
+    if (game.groupId) {
+      if (!gamesByGroup[game.groupId]) {
+        gamesByGroup[game.groupId] = [];
+      }
+      gamesByGroup[game.groupId].push(game);
+    } else {
+      standaloneActiveGames.push(game);
+    }
+  }
+
   const completedGames = games.filter((g) => g.status === "COMPLETED");
+  const recentCompletedGames = completedGames.slice(0, MAX_COMPLETED_GAMES);
+  const totalCompletedCount = completedGames.length;
+
+  const adminGroups = groups
+    .filter((g) => g.myRole === "OWNER" || g.myRole === "ADMIN")
+    .map((g) => ({ id: g.id, name: g.name }));
 
   return (
     <>
       <Navbar />
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Your Games</h1>
-          <CreateGameDialog groups={groups.filter((g) => g.myRole === "OWNER" || g.myRole === "ADMIN").map((g) => ({ id: g.id, name: g.name }))} />
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="grid gap-8 md:grid-cols-2">
+          {/* Left Column: Groups with nested active games */}
+          <div>
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold">Your Groups</h1>
+              <CreateGroupDialog />
+            </div>
+            <section className="mt-6">
+              <DashboardGroupList
+                groups={groups}
+                gamesByGroup={gamesByGroup}
+              />
+            </section>
+          </div>
+
+          {/* Right Column: Standalone games + recent completed */}
+          <div>
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold">Your Games</h1>
+              <CreateGameDialog groups={adminGroups} />
+            </div>
+
+            {standaloneActiveGames.length > 0 && (
+              <section className="mt-6">
+                <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Active
+                </h2>
+                <GameList games={standaloneActiveGames} />
+              </section>
+            )}
+
+            {standaloneActiveGames.length > 0 &&
+              recentCompletedGames.length > 0 && (
+                <Separator className="my-6" />
+              )}
+
+            {recentCompletedGames.length > 0 && (
+              <section
+                className={
+                  standaloneActiveGames.length === 0 ? "mt-6" : ""
+                }
+              >
+                <RecentCompletedGames
+                  games={recentCompletedGames}
+                  totalCount={totalCompletedCount}
+                />
+              </section>
+            )}
+
+            {standaloneActiveGames.length === 0 &&
+              recentCompletedGames.length === 0 && (
+                <section className="mt-6">
+                  <GameList games={[]} />
+                </section>
+              )}
+          </div>
         </div>
-
-        {activeGames.length > 0 && (
-          <section className="mt-6">
-            <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Active
-            </h2>
-            <GameList games={activeGames} />
-          </section>
-        )}
-
-        {activeGames.length > 0 && completedGames.length > 0 && (
-          <Separator className="my-6" />
-        )}
-
-        {completedGames.length > 0 && (
-          <section className={activeGames.length === 0 ? "mt-6" : ""}>
-            <h2 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Completed
-            </h2>
-            <GameList games={completedGames} />
-          </section>
-        )}
-
-        {games.length === 0 && (
-          <GameList games={[]} />
-        )}
-
-        <Separator className="my-8" />
-
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Your Groups</h1>
-          <CreateGroupDialog />
-        </div>
-        <section className="mt-6">
-          <GroupList groups={groups} />
-        </section>
       </div>
     </>
   );
