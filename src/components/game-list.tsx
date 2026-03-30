@@ -18,10 +18,6 @@ export function GameList({ games }: { games: GameWithPlayers[] }) {
   return (
     <div className="grid gap-4">
       {games.map((game) => {
-        const totalBuyins = game.players.reduce(
-          (sum, p) => sum + p.buyins.reduce((s, b) => s + b.amount, 0),
-          0
-        );
         return (
           <Link key={game.id} href={`/games/${game.id}`}>
             <Card className="transition-colors hover:border-primary/50">
@@ -41,8 +37,7 @@ export function GameList({ games }: { games: GameWithPlayers[] }) {
                     {new Date(game.date).toLocaleDateString()}
                   </span>
                   <span>{game.players.length} players</span>
-                  <span>Pot: {totalBuyins}</span>
-                  {game.group && (
+{game.group && (
                     <span className="flex items-center gap-1">
                       <Users className="h-3 w-3" />
                       {game.group.name}

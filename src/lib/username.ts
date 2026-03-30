@@ -54,7 +54,7 @@ type PlayerForDisplay = {
 export function getDisplayName(player: PlayerForDisplay): string {
   const username = player.groupMember?.user?.username;
   if (username) return formatUsername(username);
-  return player.name;
+  return stripGuestSuffix(player.name);
 }
 
 export function getFullName(player: PlayerForDisplay): string | null {
@@ -84,10 +84,14 @@ type MemberForDisplay = {
   user?: { username?: string | null; name?: string | null } | null;
 };
 
+function stripGuestSuffix(name: string): string {
+  return name.replace(/\s*\(Guest\)\s*$/i, "");
+}
+
 export function getMemberDisplayName(member: MemberForDisplay): string {
   const username = member.user?.username;
   if (username) return formatUsername(username);
-  return member.user?.name ?? member.name;
+  return stripGuestSuffix(member.user?.name ?? member.name);
 }
 
 export function getMemberFullName(member: MemberForDisplay): string | null {

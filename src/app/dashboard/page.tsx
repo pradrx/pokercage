@@ -34,7 +34,12 @@ export default async function DashboardPage() {
   }));
 
   const games = (await prisma.game.findMany({
-    where: { userId: session.user.id },
+    where: {
+      OR: [
+        { userId: session.user.id },
+        { players: { some: { groupMember: { userId: session.user.id } } } },
+      ],
+    },
     include: {
       players: {
         include: { buyins: true },
