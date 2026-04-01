@@ -24,7 +24,7 @@ export function RecentCompletedGames({
           href="/dashboard/completed"
           className="mt-4 block text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          View all {totalCount} completed games &rarr;
+          View all {totalCount}{" "}completed games &rarr;
         </Link>
       )}
     </div>

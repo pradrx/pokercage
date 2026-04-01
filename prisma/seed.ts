@@ -426,6 +426,168 @@ async function main() {
     console.log("Game already exists: Home Game");
   }
 
+  // ── Bulk Games (stress-test volume) ───────────────────────────────
+
+  const gameTemplates: {
+    name: string;
+    groupId: string | null;
+    ownerId: string;
+    ownerName: string;
+    daysAgo: number;
+    status: "ACTIVE" | "COMPLETED";
+    buyin: number;
+    playerCount: number; // how many group members (or standalone names) to use
+  }[] = [
+    // Friday Night Poker (group1) — 8 more games
+    { name: "March Madness Game",       groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 60, status: "COMPLETED", buyin: 100, playerCount: 6 },
+    { name: "Valentine's Day Poker",    groupId: group1.id, ownerId: bob.id,   ownerName: "@bob",     daysAgo: 45, status: "COMPLETED", buyin: 50,  playerCount: 5 },
+    { name: "Super Bowl Sunday",        groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 55, status: "COMPLETED", buyin: 75,  playerCount: 7 },
+    { name: "Friday the 13th",          groupId: group1.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 30, status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "Turbo Tuesday",            groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 21, status: "COMPLETED", buyin: 50,  playerCount: 4 },
+    { name: "Bounty Night",             groupId: group1.id, ownerId: bob.id,   ownerName: "@bob",     daysAgo: 14, status: "COMPLETED", buyin: 100, playerCount: 6 },
+    { name: "Late Night Grind",         groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 5,  status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "This Week's Game",         groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 1,  status: "ACTIVE",    buyin: 100, playerCount: 6 },
+
+    // Heads Up Club (group2) — 6 more games
+    { name: "HU Match #2",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 50, status: "COMPLETED", buyin: 50,  playerCount: 2 },
+    { name: "HU Match #3",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 40, status: "COMPLETED", buyin: 100, playerCount: 2 },
+    { name: "HU Match #4",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 28, status: "COMPLETED", buyin: 75,  playerCount: 2 },
+    { name: "HU Match #5",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 18, status: "COMPLETED", buyin: 50,  playerCount: 2 },
+    { name: "HU Match #6",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 10, status: "COMPLETED", buyin: 100, playerCount: 2 },
+    { name: "HU Match #7",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 2,  status: "ACTIVE",    buyin: 50,  playerCount: 2 },
+
+    // High Rollers (group3) — 6 more games
+    { name: "PLO Night",               groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 42, status: "COMPLETED", buyin: 500, playerCount: 5 },
+    { name: "Nosebleed Session",        groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 35, status: "COMPLETED", buyin: 300, playerCount: 4 },
+    { name: "The Big Game",             groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 22, status: "COMPLETED", buyin: 500, playerCount: 6 },
+    { name: "Shot Clock Poker",         groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 12, status: "COMPLETED", buyin: 200, playerCount: 5 },
+    { name: "Saturday Highstakes",      groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 4,  status: "COMPLETED", buyin: 400, playerCount: 4 },
+    { name: "Wednesday Deepstack 2",    groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 0,  status: "ACTIVE",    buyin: 200, playerCount: 5 },
+
+    // Sunday Donkaments (group4) — 5 more games
+    { name: "Donkament #1",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 48, status: "COMPLETED", buyin: 25,  playerCount: 4 },
+    { name: "Donkament #2",            groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 34, status: "COMPLETED", buyin: 25,  playerCount: 3 },
+    { name: "Donkament #3",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 20, status: "COMPLETED", buyin: 50,  playerCount: 4 },
+    { name: "Donkament #4",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 8,  status: "COMPLETED", buyin: 25,  playerCount: 4 },
+    { name: "Donkament #5 - The Remix",groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 1,  status: "ACTIVE",    buyin: 50,  playerCount: 3 },
+  ];
+
+  const standaloneNames = ["Randall", "Steve", "Tommy", "Vince", "Yuki", "Zara"];
+
+  // Simple seeded PRNG so results are deterministic
+  let rngState = 42;
+  function seededRandom() {
+    rngState = (rngState * 1664525 + 1013904223) & 0x7fffffff;
+    return rngState / 0x7fffffff;
+  }
+
+  // Generate balanced cashouts: total cashout === total buyin
+  function balancedCashouts(playerCount: number, buyinPerPlayer: number, rebuyChance: number): { buyins: number[]; cashout: number }[] {
+    const results: { buyins: number[]; cashout: number }[] = [];
+    let totalPool = 0;
+
+    // Assign buyins (some players rebuy)
+    for (let i = 0; i < playerCount; i++) {
+      const buyins = [buyinPerPlayer];
+      if (seededRandom() < rebuyChance) {
+        buyins.push(buyinPerPlayer);
+      }
+      totalPool += buyins.reduce((a, b) => a + b, 0);
+      results.push({ buyins, cashout: 0 });
+    }
+
+    // Distribute the pool randomly but keep it balanced
+    let remaining = totalPool;
+    for (let i = 0; i < playerCount - 1; i++) {
+      const maxShare = remaining - (playerCount - 1 - i); // leave at least $1 for remaining
+      const share = Math.max(1, Math.round(seededRandom() * maxShare * 0.6));
+      results[i].cashout = share;
+      remaining -= share;
+    }
+    results[playerCount - 1].cashout = remaining;
+
+    return results;
+  }
+
+  // Cache group members
+  const groupMemberCache: Record<string, Awaited<ReturnType<typeof prisma.groupMember.findMany>>> = {};
+  async function getGroupMembers(groupId: string) {
+    if (!groupMemberCache[groupId]) {
+      groupMemberCache[groupId] = await prisma.groupMember.findMany({ where: { groupId } });
+    }
+    return groupMemberCache[groupId];
+  }
+
+  for (const tmpl of gameTemplates) {
+    const exists = await prisma.game.findFirst({
+      where: { name: tmpl.name, groupId: tmpl.groupId },
+    });
+    if (exists) {
+      console.log(`Game already exists: ${tmpl.name}`);
+      continue;
+    }
+
+    let playerData: { name: string; groupMemberId?: string }[];
+
+    if (tmpl.groupId) {
+      const members = await getGroupMembers(tmpl.groupId);
+      // Shuffle members deterministically and take playerCount
+      const shuffled = [...members].sort(() => seededRandom() - 0.5);
+      playerData = shuffled.slice(0, tmpl.playerCount).map((m) => ({
+        name: m.name,
+        groupMemberId: m.id,
+      }));
+    } else {
+      playerData = standaloneNames.slice(0, tmpl.playerCount).map((n) => ({ name: n }));
+    }
+
+    const gameDate = new Date(Date.now() - tmpl.daysAgo * 24 * 60 * 60 * 1000);
+
+    const events: { type: "GAME_CREATED" | "GAME_COMPLETED"; actorId: string; actorName: string; detail: string }[] = [
+      { type: "GAME_CREATED", actorId: tmpl.ownerId, actorName: tmpl.ownerName, detail: `Game "${tmpl.name}" created` },
+    ];
+    if (tmpl.status === "COMPLETED") {
+      events.push({ type: "GAME_COMPLETED", actorId: tmpl.ownerId, actorName: tmpl.ownerName, detail: "Game marked as completed" });
+    }
+
+    const game = await prisma.game.create({
+      data: {
+        name: tmpl.name,
+        date: gameDate,
+        status: tmpl.status,
+        userId: tmpl.ownerId,
+        groupId: tmpl.groupId,
+        players: {
+          create: playerData.map((p) => ({
+            name: p.name,
+            ...(p.groupMemberId ? { groupMemberId: p.groupMemberId } : {}),
+          })),
+        },
+        events: { create: events },
+      },
+      include: { players: true },
+    });
+
+    if (tmpl.status === "COMPLETED") {
+      const cashouts = balancedCashouts(game.players.length, tmpl.buyin, 0.25);
+      for (let i = 0; i < game.players.length; i++) {
+        const p = game.players[i];
+        const c = cashouts[i];
+        for (const amt of c.buyins) {
+          await prisma.buyin.create({ data: { amount: amt, playerId: p.id } });
+        }
+        await prisma.player.update({ where: { id: p.id }, data: { cashout: c.cashout } });
+      }
+    } else {
+      // Active games: just give everyone the base buyin
+      for (const p of game.players) {
+        await prisma.buyin.create({ data: { amount: tmpl.buyin, playerId: p.id } });
+      }
+    }
+
+    console.log(`Created game: ${tmpl.name} (${game.players.length} players, ${tmpl.status.toLowerCase()})`);
+  }
+
   console.log("\nSeeding complete!");
 }
 
