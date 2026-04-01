@@ -144,8 +144,8 @@ model Game {
   shareToken String     @unique @default(cuid())
   userId     String
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  groupId    String?
-  group      Group?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  groupId    String
+  group      Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
   players    Player[]
   events     GameEvent[]
   createdAt  DateTime   @default(now())

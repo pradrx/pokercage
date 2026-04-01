@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Navbar } from "@/components/navbar";
 import { GameList } from "@/components/game-list";
@@ -10,9 +10,11 @@ import type { GameWithPlayers } from "@/lib/types";
 
 const PAGE_SIZE = 10;
 
-export default async function CompletedGamesPage({
+export default async function GroupCompletedGamesPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ groupId: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const session = await auth();
@@ -20,16 +22,30 @@ export default async function CompletedGamesPage({
     redirect("/");
   }
 
-  const userId = session.user.id;
+  const { groupId } = await params;
+
+  const group = await prisma.group.findUnique({
+    where: { id: groupId },
+    include: {
+      members: { select: { userId: true } },
+    },
+  });
+
+  if (!group) {
+    notFound();
+  }
+
+  const isMember = group.members.some((m) => m.userId === session.user?.id);
+  if (!isMember) {
+    notFound();
+  }
+
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(typeof pageParam === "string" ? pageParam : "1", 10) || 1);
 
   const where = {
+    groupId,
     status: "COMPLETED" as const,
-    OR: [
-      { userId },
-      { players: { some: { groupMember: { userId } } } },
-    ],
   };
 
   const [games, totalCount] = await Promise.all([
@@ -55,11 +71,11 @@ export default async function CompletedGamesPage({
       <Navbar />
       <div className="mx-auto max-w-3xl px-4 py-8">
         <Link
-          href="/dashboard"
+          href={`/groups/${groupId}`}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to dashboard
+          Back to {group.name}
         </Link>
 
         <h1 className="text-2xl font-bold mb-6">
@@ -71,7 +87,11 @@ export default async function CompletedGamesPage({
 
         <GameList games={games} />
 
-        <Pagination page={page} totalPages={totalPages} baseHref="/dashboard/completed" />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          baseHref={`/groups/${groupId}/completed`}
+        />
       </div>
     </>
   );

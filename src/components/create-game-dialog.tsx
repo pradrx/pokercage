@@ -90,11 +90,12 @@ export function CreateGameDialog({ groups = [] }: { groups?: GroupOption[] }) {
 
     setLoading(true);
     try {
-      const body: Record<string, unknown> = { name: name.trim(), date };
-      if (groupId) {
-        body.groupId = groupId;
-        body.playerMemberIds = Array.from(selectedIds);
-      }
+      const body: Record<string, unknown> = {
+        name: name.trim(),
+        date,
+        groupId,
+        playerMemberIds: Array.from(selectedIds),
+      };
 
       const res = await fetch("/api/games", {
         method: "POST",
@@ -129,7 +130,7 @@ export function CreateGameDialog({ groups = [] }: { groups?: GroupOption[] }) {
     }
   }
 
-  const canSubmit = name.trim() && (!groupId || selectedIds.size > 0);
+  const canSubmit = name.trim() && !!groupId && selectedIds.size > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -161,51 +162,56 @@ export function CreateGameDialog({ groups = [] }: { groups?: GroupOption[] }) {
             />
           </div>
 
-          {groups.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <Label>Group (optional)</Label>
-              <Select
-                value={groupId ?? ""}
-                onValueChange={(val) => setGroupId(val || null)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="No group — standalone game">
-                    {groupId
-                      ? groups.find((g) => g.id === groupId)?.name
-                      : "No group — standalone game"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No group</SelectItem>
-                  {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          {groups.length > 0 ? (
+            <>
+              <div className="flex flex-col gap-2">
+                <Label>Group</Label>
+                <Select
+                  value={groupId ?? ""}
+                  onValueChange={(val) => setGroupId(val || null)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a group">
+                      {groupId
+                        ? groups.find((g) => g.id === groupId)?.name
+                        : "Select a group"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {groupId && (
-            <div className="flex flex-col gap-2">
-              <Label>Players</Label>
-              {loadingMembers ? (
-                <p className="text-sm text-muted-foreground">Loading members...</p>
-              ) : (
-                <GroupPlayerSelector
-                  members={members}
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  onAddGuest={handleAddGuest}
-                />
+              {groupId && (
+                <div className="flex flex-col gap-2">
+                  <Label>Players</Label>
+                  {loadingMembers ? (
+                    <p className="text-sm text-muted-foreground">Loading members...</p>
+                  ) : (
+                    <GroupPlayerSelector
+                      members={members}
+                      selectedIds={selectedIds}
+                      onSelectionChange={setSelectedIds}
+                      onAddGuest={handleAddGuest}
+                    />
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
-          <Button type="submit" disabled={loading || !canSubmit}>
-            {loading ? "Creating..." : "Create Game"}
-          </Button>
+              <Button type="submit" disabled={loading || !canSubmit}>
+                {loading ? "Creating..." : "Create Game"}
+              </Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              You need to create a group before starting a game.
+            </p>
+          )}
         </form>
       </DialogContent>
     </Dialog>

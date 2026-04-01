@@ -9,7 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { LogOut, Settings, Users } from "lucide-react";
+import { LogOut, Settings, Users, Dices } from "lucide-react";
+import { CageIcon } from "@/components/cage-icon";
 
 export function Navbar() {
   const { data: session } = useSession();
@@ -18,17 +19,27 @@ export function Navbar() {
     <header className="border-b border-border">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-lg font-bold tracking-tight">
-            Poker Cage
+          <Link href="/dashboard" className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+            <CageIcon className="h-6 w-6" />
+            pokercage
           </Link>
           {session?.user && (
-            <Link
-              href="/groups"
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Users className="h-4 w-4" />
-              Groups
-            </Link>
+            <>
+              <Link
+                href="/groups"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Users className="h-4 w-4" />
+                Groups
+              </Link>
+              <Link
+                href="/dashboard/completed"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Dices className="h-4 w-4" />
+                Games
+              </Link>
+            </>
           )}
         </div>
         {session?.user && (

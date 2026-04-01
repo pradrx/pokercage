@@ -37,12 +37,10 @@ export function GameList({ games }: { games: GameWithPlayers[] }) {
                     {new Date(game.date).toLocaleDateString()}
                   </span>
                   <span>{game.players.length} players</span>
-{game.group && (
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {game.group.name}
-                    </span>
-                  )}
+                  <span className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {game.group.name}
+                  </span>
                 </div>
               </CardContent>
             </Card>

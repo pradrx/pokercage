@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { CageIcon } from "@/components/cage-icon";
 
 export function LandingHero({
   devUsers = [],
@@ -25,7 +26,10 @@ export function LandingHero({
   return (
     <div className="flex max-w-xl flex-col items-center gap-8 text-center">
       <div className="flex flex-col gap-3">
-        <h1 className="text-5xl font-bold tracking-tight">Poker Cage</h1>
+        <h1 className="flex items-center justify-center gap-3 text-5xl font-bold tracking-tight">
+          <CageIcon className="h-12 w-12" />
+          pokercage
+        </h1>
         <p className="text-lg text-muted-foreground">
           Track buyins, cashouts, and settlements for your poker home games.
           Create a game, add players, and let us figure out who owes whom.

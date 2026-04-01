@@ -37,7 +37,6 @@ export async function canEditGame(
   userId: string
 ): Promise<boolean> {
   if (game.userId === userId) return true;
-  if (!game.groupId) return false;
   const membership = await getGroupMembership(game.groupId, userId);
   return membership?.role === "OWNER" || membership?.role === "ADMIN";
 }
@@ -47,7 +46,6 @@ export async function canViewGame(
   userId: string
 ): Promise<boolean> {
   if (game.userId === userId) return true;
-  if (!game.groupId) return false;
   const membership = await getGroupMembership(game.groupId, userId);
   return membership !== null;
 }

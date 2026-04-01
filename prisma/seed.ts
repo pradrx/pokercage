@@ -380,99 +380,102 @@ async function main() {
     console.log("Game already exists: HU Match #1");
   }
 
-  // Game 5: Alice's standalone game (no group)
-  if (!(await prisma.game.findFirst({ where: { name: "Home Game", userId: alice.id, groupId: null } }))) {
-    const game5 = await prisma.game.create({
-      data: {
-        name: "Home Game",
-        date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-        status: "COMPLETED",
-        userId: alice.id,
-        players: {
-          create: [
-            { name: "Alice" },
-            { name: "Randall" },
-            { name: "Steve" },
-          ],
-        },
-        events: {
-          create: {
-            type: "GAME_CREATED",
-            actorId: alice.id,
-            actorName: "@alice",
-            detail: 'Game "Home Game" created',
-          },
-        },
-      },
-      include: { players: true },
-    });
-
-    const standaloneAmounts = [
-      { buyins: [50], cashout: 80 },
-      { buyins: [50], cashout: 40 },
-      { buyins: [50, 25], cashout: 55 },
-    ];
-    for (let i = 0; i < game5.players.length; i++) {
-      const p = game5.players[i];
-      const a = standaloneAmounts[i];
-      for (const amt of a.buyins) {
-        await prisma.buyin.create({ data: { amount: amt, playerId: p.id } });
-      }
-      await prisma.player.update({ where: { id: p.id }, data: { cashout: a.cashout } });
-    }
-    await prisma.game.update({ where: { id: game5.id }, data: { status: "COMPLETED" } });
-    console.log("Created game: Home Game (standalone, completed)");
-  } else {
-    console.log("Game already exists: Home Game");
-  }
-
   // ── Bulk Games (stress-test volume) ───────────────────────────────
 
   const gameTemplates: {
     name: string;
-    groupId: string | null;
+    groupId: string;
     ownerId: string;
     ownerName: string;
     daysAgo: number;
     status: "ACTIVE" | "COMPLETED";
     buyin: number;
-    playerCount: number; // how many group members (or standalone names) to use
+    playerCount: number;
   }[] = [
-    // Friday Night Poker (group1) — 8 more games
-    { name: "March Madness Game",       groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 60, status: "COMPLETED", buyin: 100, playerCount: 6 },
-    { name: "Valentine's Day Poker",    groupId: group1.id, ownerId: bob.id,   ownerName: "@bob",     daysAgo: 45, status: "COMPLETED", buyin: 50,  playerCount: 5 },
-    { name: "Super Bowl Sunday",        groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 55, status: "COMPLETED", buyin: 75,  playerCount: 7 },
-    { name: "Friday the 13th",          groupId: group1.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 30, status: "COMPLETED", buyin: 100, playerCount: 5 },
-    { name: "Turbo Tuesday",            groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 21, status: "COMPLETED", buyin: 50,  playerCount: 4 },
-    { name: "Bounty Night",             groupId: group1.id, ownerId: bob.id,   ownerName: "@bob",     daysAgo: 14, status: "COMPLETED", buyin: 100, playerCount: 6 },
-    { name: "Late Night Grind",         groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 5,  status: "COMPLETED", buyin: 100, playerCount: 5 },
-    { name: "This Week's Game",         groupId: group1.id, ownerId: alice.id, ownerName: "@alice",   daysAgo: 1,  status: "ACTIVE",    buyin: 100, playerCount: 6 },
+    // Friday Night Poker (group1) — 26 bulk games (~28 total with hand-crafted)
+    { name: "New Year's Kickoff",         groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 180, status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "MLK Weekend Game",           groupId: group1.id, ownerId: bob.id,     ownerName: "@bob",     daysAgo: 170, status: "COMPLETED", buyin: 50,  playerCount: 6 },
+    { name: "Blizzard Poker",             groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 160, status: "COMPLETED", buyin: 75,  playerCount: 4 },
+    { name: "Groundhog Day Special",      groupId: group1.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 150, status: "COMPLETED", buyin: 100, playerCount: 7 },
+    { name: "Pre-Super Bowl Warmup",      groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 140, status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "Super Bowl Sunday",          groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 130, status: "COMPLETED", buyin: 75,  playerCount: 7 },
+    { name: "Presidents' Day Game",       groupId: group1.id, ownerId: bob.id,     ownerName: "@bob",     daysAgo: 120, status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "Leap Year Special",          groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 110, status: "COMPLETED", buyin: 50,  playerCount: 6 },
+    { name: "Valentine's Day Poker",      groupId: group1.id, ownerId: bob.id,     ownerName: "@bob",     daysAgo: 100, status: "COMPLETED", buyin: 50,  playerCount: 5 },
+    { name: "March Madness Game",         groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 90,  status: "COMPLETED", buyin: 100, playerCount: 6 },
+    { name: "St. Patrick's Day Poker",    groupId: group1.id, ownerId: evan.id,    ownerName: "@evan_p",  daysAgo: 80,  status: "COMPLETED", buyin: 75,  playerCount: 5 },
+    { name: "Spring Forward Game",        groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 70,  status: "COMPLETED", buyin: 100, playerCount: 6 },
+    { name: "April Fools Session",        groupId: group1.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 60,  status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "Tax Day Tilt",              groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 55,  status: "COMPLETED", buyin: 50,  playerCount: 7 },
+    { name: "Friday the 13th",           groupId: group1.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 45,  status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "Memorial Day Weekend",      groupId: group1.id, ownerId: bob.id,     ownerName: "@bob",     daysAgo: 40,  status: "COMPLETED", buyin: 100, playerCount: 6 },
+    { name: "Summer Kickoff",            groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 35,  status: "COMPLETED", buyin: 75,  playerCount: 5 },
+    { name: "Turbo Tuesday",             groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 28,  status: "COMPLETED", buyin: 50,  playerCount: 4 },
+    { name: "Bounty Night",              groupId: group1.id, ownerId: bob.id,     ownerName: "@bob",     daysAgo: 21,  status: "COMPLETED", buyin: 100, playerCount: 6 },
+    { name: "Fourth of July Bash",       groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 16,  status: "COMPLETED", buyin: 100, playerCount: 7 },
+    { name: "Mid-July Grind",            groupId: group1.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 12,  status: "COMPLETED", buyin: 50,  playerCount: 5 },
+    { name: "Late Night Grind",          groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 8,   status: "COMPLETED", buyin: 100, playerCount: 5 },
+    { name: "Weekend Warmup",            groupId: group1.id, ownerId: bob.id,     ownerName: "@bob",     daysAgo: 5,   status: "COMPLETED", buyin: 75,  playerCount: 6 },
+    { name: "Midweek Madness",           groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 3,   status: "ACTIVE",    buyin: 100, playerCount: 5 },
+    { name: "Last Night's Game",         groupId: group1.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 1,   status: "ACTIVE",    buyin: 100, playerCount: 6 },
+    { name: "This Week's Game",          groupId: group1.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 0,   status: "ACTIVE",    buyin: 100, playerCount: 6 },
 
-    // Heads Up Club (group2) — 6 more games
-    { name: "HU Match #2",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 50, status: "COMPLETED", buyin: 50,  playerCount: 2 },
-    { name: "HU Match #3",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 40, status: "COMPLETED", buyin: 100, playerCount: 2 },
-    { name: "HU Match #4",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 28, status: "COMPLETED", buyin: 75,  playerCount: 2 },
-    { name: "HU Match #5",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 18, status: "COMPLETED", buyin: 50,  playerCount: 2 },
-    { name: "HU Match #6",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 10, status: "COMPLETED", buyin: 100, playerCount: 2 },
-    { name: "HU Match #7",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 2,  status: "ACTIVE",    buyin: 50,  playerCount: 2 },
+    // Heads Up Club (group2) — 14 bulk games (~15 total)
+    { name: "HU Match #2",              groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 150, status: "COMPLETED", buyin: 50,  playerCount: 2 },
+    { name: "HU Match #3",              groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 140, status: "COMPLETED", buyin: 100, playerCount: 2 },
+    { name: "HU Match #4",              groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 125, status: "COMPLETED", buyin: 75,  playerCount: 2 },
+    { name: "HU Match #5",              groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 110, status: "COMPLETED", buyin: 50,  playerCount: 2 },
+    { name: "HU Match #6",              groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 95,  status: "COMPLETED", buyin: 100, playerCount: 2 },
+    { name: "HU Match #7",              groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 80,  status: "COMPLETED", buyin: 50,  playerCount: 2 },
+    { name: "HU Match #8",              groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 65,  status: "COMPLETED", buyin: 75,  playerCount: 2 },
+    { name: "HU Match #9",              groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 50,  status: "COMPLETED", buyin: 100, playerCount: 2 },
+    { name: "HU Match #10",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 38,  status: "COMPLETED", buyin: 50,  playerCount: 2 },
+    { name: "HU Match #11",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 28,  status: "COMPLETED", buyin: 100, playerCount: 2 },
+    { name: "HU Match #12",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 18,  status: "COMPLETED", buyin: 75,  playerCount: 2 },
+    { name: "HU Match #13",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 10,  status: "COMPLETED", buyin: 50,  playerCount: 2 },
+    { name: "HU Match #14",             groupId: group2.id, ownerId: alice.id, ownerName: "@alice", daysAgo: 4,   status: "ACTIVE",    buyin: 100, playerCount: 2 },
+    { name: "HU Match #15",             groupId: group2.id, ownerId: bob.id,   ownerName: "@bob",   daysAgo: 0,   status: "ACTIVE",    buyin: 50,  playerCount: 2 },
 
-    // High Rollers (group3) — 6 more games
-    { name: "PLO Night",               groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 42, status: "COMPLETED", buyin: 500, playerCount: 5 },
-    { name: "Nosebleed Session",        groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 35, status: "COMPLETED", buyin: 300, playerCount: 4 },
-    { name: "The Big Game",             groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 22, status: "COMPLETED", buyin: 500, playerCount: 6 },
-    { name: "Shot Clock Poker",         groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 12, status: "COMPLETED", buyin: 200, playerCount: 5 },
-    { name: "Saturday Highstakes",      groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 4,  status: "COMPLETED", buyin: 400, playerCount: 4 },
-    { name: "Wednesday Deepstack 2",    groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 0,  status: "ACTIVE",    buyin: 200, playerCount: 5 },
+    // High Rollers (group3) — 21 bulk games (~22 total)
+    { name: "PLO Night",                groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 175, status: "COMPLETED", buyin: 500, playerCount: 5 },
+    { name: "Nosebleed Session",         groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 165, status: "COMPLETED", buyin: 300, playerCount: 4 },
+    { name: "The Big Game",              groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 155, status: "COMPLETED", buyin: 500, playerCount: 6 },
+    { name: "High Stakes Frenzy",        groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 145, status: "COMPLETED", buyin: 400, playerCount: 5 },
+    { name: "Sunday High Roller",        groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 135, status: "COMPLETED", buyin: 300, playerCount: 4 },
+    { name: "PLO Night II",             groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 125, status: "COMPLETED", buyin: 500, playerCount: 5 },
+    { name: "Bankroll Builder",          groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 115, status: "COMPLETED", buyin: 200, playerCount: 6 },
+    { name: "Shot Clock Poker",          groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 105, status: "COMPLETED", buyin: 200, playerCount: 5 },
+    { name: "Whale Watch",              groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 95,  status: "COMPLETED", buyin: 500, playerCount: 4 },
+    { name: "Saturday Highstakes",       groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 85,  status: "COMPLETED", buyin: 400, playerCount: 5 },
+    { name: "The Gauntlet",             groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 75,  status: "COMPLETED", buyin: 300, playerCount: 6 },
+    { name: "PLO Night III",            groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 65,  status: "COMPLETED", buyin: 500, playerCount: 5 },
+    { name: "Deep Stack Showdown",       groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 55,  status: "COMPLETED", buyin: 200, playerCount: 4 },
+    { name: "Nosebleed Session II",      groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 45,  status: "COMPLETED", buyin: 300, playerCount: 5 },
+    { name: "The Big Game II",           groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 38,  status: "COMPLETED", buyin: 500, playerCount: 6 },
+    { name: "High Stakes Frenzy II",     groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 30,  status: "COMPLETED", buyin: 400, playerCount: 5 },
+    { name: "Roller Coaster Night",      groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 22,  status: "COMPLETED", buyin: 300, playerCount: 4 },
+    { name: "PLO Night IV",             groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 15,  status: "COMPLETED", buyin: 500, playerCount: 5 },
+    { name: "Saturday Highstakes II",    groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 8,   status: "COMPLETED", buyin: 400, playerCount: 6 },
+    { name: "Midweek Nosebleed",         groupId: group3.id, ownerId: hana.id, ownerName: "@hana",   daysAgo: 3,   status: "ACTIVE",    buyin: 300, playerCount: 5 },
+    { name: "Wednesday Deepstack 2",     groupId: group3.id, ownerId: greg.id, ownerName: "@greg_n", daysAgo: 0,   status: "ACTIVE",    buyin: 200, playerCount: 5 },
 
-    // Sunday Donkaments (group4) — 5 more games
-    { name: "Donkament #1",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 48, status: "COMPLETED", buyin: 25,  playerCount: 4 },
-    { name: "Donkament #2",            groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 34, status: "COMPLETED", buyin: 25,  playerCount: 3 },
-    { name: "Donkament #3",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 20, status: "COMPLETED", buyin: 50,  playerCount: 4 },
-    { name: "Donkament #4",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 8,  status: "COMPLETED", buyin: 25,  playerCount: 4 },
-    { name: "Donkament #5 - The Remix",groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 1,  status: "ACTIVE",    buyin: 50,  playerCount: 3 },
+    // Sunday Donkaments (group4) — 15 bulk games (~15 total)
+    { name: "Donkament #1",             groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 160, status: "COMPLETED", buyin: 25,  playerCount: 4 },
+    { name: "Donkament #2",             groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 148, status: "COMPLETED", buyin: 25,  playerCount: 3 },
+    { name: "Donkament #3",             groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 135, status: "COMPLETED", buyin: 50,  playerCount: 4 },
+    { name: "Donkament #4",             groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 122, status: "COMPLETED", buyin: 25,  playerCount: 3 },
+    { name: "Donkament #5",             groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 110, status: "COMPLETED", buyin: 25,  playerCount: 4 },
+    { name: "Donkament #6",             groupId: group4.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 98,  status: "COMPLETED", buyin: 50,  playerCount: 4 },
+    { name: "Donkament #7",             groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 85,  status: "COMPLETED", buyin: 25,  playerCount: 3 },
+    { name: "Donkament #8",             groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 72,  status: "COMPLETED", buyin: 25,  playerCount: 4 },
+    { name: "Donkament #9",             groupId: group4.id, ownerId: hana.id,    ownerName: "@hana",    daysAgo: 60,  status: "COMPLETED", buyin: 50,  playerCount: 4 },
+    { name: "Donkament #10",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 48,  status: "COMPLETED", buyin: 25,  playerCount: 3 },
+    { name: "Donkament #11",            groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 35,  status: "COMPLETED", buyin: 25,  playerCount: 4 },
+    { name: "Donkament #12",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 22,  status: "COMPLETED", buyin: 50,  playerCount: 4 },
+    { name: "Donkament #13",            groupId: group4.id, ownerId: alice.id,   ownerName: "@alice",   daysAgo: 12,  status: "COMPLETED", buyin: 25,  playerCount: 3 },
+    { name: "Donkament #14",            groupId: group4.id, ownerId: fiona.id,   ownerName: "@fiona",   daysAgo: 5,   status: "ACTIVE",    buyin: 25,  playerCount: 4 },
+    { name: "Donkament #15 - The Remix",groupId: group4.id, ownerId: charlie.id, ownerName: "@charlie", daysAgo: 0,   status: "ACTIVE",    buyin: 50,  playerCount: 3 },
   ];
-
-  const standaloneNames = ["Randall", "Steve", "Tommy", "Vince", "Yuki", "Zara"];
 
   // Simple seeded PRNG so results are deterministic
   let rngState = 42;
@@ -527,19 +530,13 @@ async function main() {
       continue;
     }
 
-    let playerData: { name: string; groupMemberId?: string }[];
-
-    if (tmpl.groupId) {
-      const members = await getGroupMembers(tmpl.groupId);
-      // Shuffle members deterministically and take playerCount
-      const shuffled = [...members].sort(() => seededRandom() - 0.5);
-      playerData = shuffled.slice(0, tmpl.playerCount).map((m) => ({
-        name: m.name,
-        groupMemberId: m.id,
-      }));
-    } else {
-      playerData = standaloneNames.slice(0, tmpl.playerCount).map((n) => ({ name: n }));
-    }
+    const members = await getGroupMembers(tmpl.groupId);
+    // Shuffle members deterministically and take playerCount
+    const shuffled = [...members].sort(() => seededRandom() - 0.5);
+    const playerData = shuffled.slice(0, tmpl.playerCount).map((m) => ({
+      name: m.name,
+      groupMemberId: m.id,
+    }));
 
     const gameDate = new Date(Date.now() - tmpl.daysAgo * 24 * 60 * 60 * 1000);
 

@@ -33,29 +33,27 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { name, date, groupId, playerMemberIds } = body;
 
-  if (!name || !date) {
+  if (!name || !date || !groupId) {
     return NextResponse.json(
-      { error: "Name and date are required" },
+      { error: "Name, date, and groupId are required" },
       { status: 400 }
     );
   }
 
-  // If creating within a group, verify caller is owner or admin
-  if (groupId) {
-    try {
-      await requireGroupAdmin(groupId, session.user.id);
-    } catch (e) {
-      if (e instanceof AuthError) {
-        return NextResponse.json({ error: e.message }, { status: e.status });
-      }
-      throw e;
+  // Verify caller is owner or admin of the group
+  try {
+    await requireGroupAdmin(groupId, session.user.id);
+  } catch (e) {
+    if (e instanceof AuthError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
     }
+    throw e;
   }
 
   // Build player data from group member IDs if provided
   let playersCreate: { name: string; groupMemberId: string }[] = [];
   const memberDisplayNames = new Map<string, string>();
-  if (groupId && playerMemberIds?.length > 0) {
+  if (playerMemberIds?.length > 0) {
     const groupMembers = await prisma.groupMember.findMany({
       where: {
         id: { in: playerMemberIds },
@@ -78,7 +76,7 @@ export async function POST(request: Request) {
       name,
       date: new Date(date),
       userId: session.user.id,
-      groupId: groupId || undefined,
+      groupId,
       players: playersCreate.length > 0
         ? { create: playersCreate }
         : undefined,

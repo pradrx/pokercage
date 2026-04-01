@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { GroupRole } from "@/generated/prisma/client";
-import type { GameWithPlayers } from "@/lib/types";
 
 type GroupItem = {
   id: string;
@@ -18,9 +17,17 @@ type GroupItem = {
   _count: { members: number };
 };
 
+type ActiveGameItem = {
+  id: string;
+  name: string;
+  players: { id: string }[];
+};
+
 type DashboardGroupListProps = {
   groups: GroupItem[];
-  gamesByGroup: Record<string, GameWithPlayers[]>;
+  gamesByGroup: Record<string, ActiveGameItem[]>;
+  hasMoreGroups?: boolean;
+  totalGroupCount?: number;
 };
 
 const roleBadgeVariant: Record<GroupRole, "default" | "secondary" | "outline"> =
@@ -33,6 +40,8 @@ const roleBadgeVariant: Record<GroupRole, "default" | "secondary" | "outline"> =
 export function DashboardGroupList({
   groups,
   gamesByGroup,
+  hasMoreGroups,
+  totalGroupCount,
 }: DashboardGroupListProps) {
   if (groups.length === 0) {
     return (
@@ -43,61 +52,61 @@ export function DashboardGroupList({
   }
 
   return (
-    <div className="grid gap-4">
-      {groups.map((group) => {
-        const activeGames = gamesByGroup[group.id] ?? [];
+    <div>
+      <div className="grid gap-4">
+        {groups.map((group) => {
+          const activeGames = gamesByGroup[group.id] ?? [];
 
-        return (
-          <Card key={group.id} className="transition-colors hover:border-primary/50">
-            <Link href={`/groups/${group.id}`}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base">{group.name}</CardTitle>
-                <Badge variant={roleBadgeVariant[group.myRole]}>
-                  {group.myRole.charAt(0) + group.myRole.slice(1).toLowerCase()}
-                </Badge>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">
-                  {group._count.members}{" "}
-                  {group._count.members === 1 ? "member" : "members"}
-                </div>
-              </CardContent>
-            </Link>
-
-            {activeGames.length > 0 && (
-              <CardContent className="pt-0">
-                <div className="border-t border-border pt-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                    Active Games
-                  </p>
-                  <div className="grid gap-2">
-                    {activeGames.map((game) => (
-                      <Link key={game.id} href={`/games/${game.id}`}>
-                        <Card
-                          size="sm"
-                          className="transition-colors hover:border-primary/50"
-                        >
-                          <CardHeader className="flex flex-row items-center justify-between pb-0">
-                            <CardTitle>{game.name}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex gap-3 text-xs text-muted-foreground">
-                              <span suppressHydrationWarning>
-                                {new Date(game.date).toLocaleDateString()}
-                              </span>
-                              <span>{game.players.length} players</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
+          return (
+            <Card key={group.id} className="transition-colors hover:border-primary/50">
+              <Link href={`/groups/${group.id}`}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base">{group.name}</CardTitle>
+                  <Badge variant={roleBadgeVariant[group.myRole]}>
+                    {group.myRole.charAt(0) + group.myRole.slice(1).toLowerCase()}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    {group._count.members}{" "}
+                    {group._count.members === 1 ? "member" : "members"}
                   </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        );
-      })}
+                </CardContent>
+              </Link>
+
+              {activeGames.length > 0 && (
+                <CardContent className="pt-0">
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                      Active Games
+                    </p>
+                    <div className="space-y-1.5">
+                      {activeGames.map((game) => (
+                        <Link key={game.id} href={`/games/${game.id}`} className="block">
+                          <div className="flex items-center justify-between text-sm hover:text-foreground transition-colors">
+                            <span>{game.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {game.players.length} {game.players.length === 1 ? "player" : "players"}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+      {hasMoreGroups && (
+        <Link
+          href="/groups"
+          className="mt-4 block text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          View all {totalGroupCount} groups &rarr;
+        </Link>
+      )}
     </div>
   );
 }

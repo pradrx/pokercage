@@ -5,11 +5,14 @@ import { Navbar } from "@/components/navbar";
 import { MemberList } from "@/components/member-list";
 import { AddMemberForm } from "@/components/add-member-form";
 import { GameList } from "@/components/game-list";
+import { RecentCompletedGames } from "@/components/recent-completed-games";
 import { CreateGroupGameDialog } from "@/components/create-group-game-dialog";
 import { InviteLinkManager } from "@/components/invite-link-manager";
 import { LeaveGroupButton } from "@/components/leave-group-button";
 import { Separator } from "@/components/ui/separator";
 import type { GameWithPlayers, GroupMemberWithUser } from "@/lib/types";
+
+const MAX_COMPLETED_GAMES = 5;
 
 export default async function GroupDetailPage({
   params,
@@ -55,11 +58,12 @@ export default async function GroupDetailPage({
       },
       group: { select: { id: true, name: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { date: "desc" },
   })) as GameWithPlayers[];
 
   const activeGames = games.filter((g) => g.status === "ACTIVE");
-  const completedGames = games.filter((g) => g.status === "COMPLETED");
+  const allCompletedGames = games.filter((g) => g.status === "COMPLETED");
+  const recentCompletedGames = allCompletedGames.slice(0, MAX_COMPLETED_GAMES);
 
   return (
     <>
@@ -115,13 +119,12 @@ export default async function GroupDetailPage({
             </div>
           )}
 
-          {completedGames.length > 0 && (
-            <div>
-              <h3 className="mb-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Completed
-              </h3>
-              <GameList games={completedGames} />
-            </div>
+          {recentCompletedGames.length > 0 && (
+            <RecentCompletedGames
+              games={recentCompletedGames}
+              totalCount={allCompletedGames.length}
+              viewAllHref={`/groups/${groupId}/completed`}
+            />
           )}
 
           {games.length === 0 && (

@@ -12,4 +12,4 @@
 
 ## Future Ideas
 - [ ] Cross-group player statistics / leaderboards
-- [ ] Migration tool to move existing standalone games into a group
+

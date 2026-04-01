@@ -4,7 +4,6 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { LedgerTable } from "@/components/ledger-table";
-import { AddPlayerForm } from "@/components/add-player-form";
 import { GroupGameAddPlayer } from "@/components/group-game-add-player";
 import { CompleteGameDialog } from "@/components/complete-game-dialog";
 import { ReopenGameDialog } from "@/components/reopen-game-dialog";
@@ -54,7 +53,7 @@ export default async function GamePage({
       events: { orderBy: { createdAt: "desc" } },
       group: true,
     },
-  })) as (GameWithPlayersAndEvents & { group: { id: string; name: string } | null }) | null;
+  })) as (GameWithPlayersAndEvents & { group: { id: string; name: string } }) | null;
 
   if (!game) {
     notFound();
@@ -77,9 +76,9 @@ export default async function GamePage({
     !!lastCompletedEvent &&
     Date.now() - new Date(lastCompletedEvent.createdAt).getTime() < REOPEN_WINDOW_MS;
 
-  // Load group members for the player selector if this is a group game
+  // Load group members for the player selector
   let groupMembers: GroupMemberWithUser[] = [];
-  if (game.groupId && canEdit) {
+  if (canEdit) {
     const members = await prisma.groupMember.findMany({
       where: { groupId: game.groupId },
       include: {
@@ -117,17 +116,15 @@ export default async function GamePage({
     <>
       <Navbar />
       <div className="mx-auto max-w-4xl px-4 py-8">
-        {game.group && (
-          <div className="mb-2">
-            <Link
-              href={`/groups/${game.group.id}`}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {game.group.name}
-            </Link>
-            <span className="text-sm text-muted-foreground mx-1.5">/</span>
-          </div>
-        )}
+        <div className="mb-2">
+          <Link
+            href={`/groups/${game.group.id}`}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {game.group.name}
+          </Link>
+          <span className="text-sm text-muted-foreground mx-1.5">/</span>
+        </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -151,15 +148,11 @@ export default async function GamePage({
 
         {canEdit && (
           <div className="mb-4">
-            {game.groupId ? (
-              <GroupGameAddPlayer
-                gameId={game.id}
-                groupId={game.groupId}
-                availableMembers={groupMembers}
-              />
-            ) : (
-              <AddPlayerForm gameId={game.id} />
-            )}
+            <GroupGameAddPlayer
+              gameId={game.id}
+              groupId={game.groupId}
+              availableMembers={groupMembers}
+            />
           </div>
         )}
 

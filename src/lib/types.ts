@@ -29,7 +29,7 @@ export type PlayerWithBuyins = Player & {
 
 export type GameWithPlayers = Game & {
   players: PlayerWithBuyins[];
-  group?: Pick<Group, "id" | "name"> | null;
+  group: Pick<Group, "id" | "name">;
 };
 
 export type GameWithPlayersAndEvents = GameWithPlayers & {

@@ -37,7 +37,7 @@ export async function POST(
   let displayName: string;
   let linkedMemberId: string | undefined;
 
-  if (groupMemberId && game.groupId) {
+  if (groupMemberId) {
     // Adding an existing group member by ID
     const member = await prisma.groupMember.findFirst({
       where: { id: groupMemberId, groupId: game.groupId },
@@ -56,16 +56,14 @@ export async function POST(
     playerName = name.trim();
     displayName = playerName;
 
-    // For group games, auto-create a guest in the group
-    if (game.groupId) {
-      const newMember = await prisma.groupMember.create({
-        data: {
-          name: playerName,
-          groupId: game.groupId,
-        },
-      });
-      linkedMemberId = newMember.id;
-    }
+    // Auto-create a guest member in the group
+    const newMember = await prisma.groupMember.create({
+      data: {
+        name: playerName,
+        groupId: game.groupId,
+      },
+    });
+    linkedMemberId = newMember.id;
   } else {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
