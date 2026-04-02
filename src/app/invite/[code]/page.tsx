@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { formatUsername } from "@/lib/username";
 import { InviteSignInCard } from "@/components/invite-sign-in-card";
-import { InviteJoinCard } from "@/components/invite-join-card";
 
 export default async function InvitePage({
   params,
@@ -43,13 +43,27 @@ export default async function InvitePage({
     where: { groupId: invite.groupId, userId: session.user.id },
   });
 
-  if (existing) {
-    redirect(`/groups/${invite.groupId}`);
+  if (!existing) {
+    const name = session.user.username
+      ? formatUsername(session.user.username)
+      : (session.user.name ?? session.user.email?.split("@")[0] ?? "Unknown");
+
+    try {
+      await prisma.groupMember.create({
+        data: {
+          name,
+          groupId: invite.groupId,
+          userId: session.user.id,
+          role: "MEMBER",
+        },
+      });
+    } catch (e: unknown) {
+      // Ignore unique constraint (race condition — already a member)
+      if (!(e instanceof Error && e.message.includes("Unique constraint"))) {
+        throw e;
+      }
+    }
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <InviteJoinCard code={code} groupName={invite.group.name} />
-    </div>
-  );
+  redirect(`/groups/${invite.groupId}`);
 }

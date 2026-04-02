@@ -34,7 +34,9 @@ export const proxy = auth((req) => {
       return NextResponse.next();
     }
 
-    return NextResponse.redirect(new URL("/setup-username", req.url));
+    const setupUrl = new URL("/setup-username", req.url);
+    setupUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(setupUrl);
   }
 
   return NextResponse.next();

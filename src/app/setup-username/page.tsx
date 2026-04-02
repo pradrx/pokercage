@@ -4,7 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SetupUsernameForm } from "@/components/setup-username-form";
 
-export default async function SetupUsernamePage() {
+export default async function SetupUsernamePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/");
@@ -19,6 +23,10 @@ export default async function SetupUsernamePage() {
     redirect("/dashboard");
   }
 
+  const { callbackUrl } = await searchParams;
+  const redirectTo =
+    callbackUrl && callbackUrl.startsWith("/") ? callbackUrl : "/dashboard";
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md">
@@ -30,7 +38,7 @@ export default async function SetupUsernamePage() {
           </p>
         </CardHeader>
         <CardContent>
-          <SetupUsernameForm />
+          <SetupUsernameForm redirectTo={redirectTo} />
         </CardContent>
       </Card>
     </div>

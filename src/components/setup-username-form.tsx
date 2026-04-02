@@ -9,7 +9,7 @@ import { validateUsername } from "@/lib/username";
 import { toast } from "sonner";
 import { Check, X, Loader2 } from "lucide-react";
 
-export function SetupUsernameForm() {
+export function SetupUsernameForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   const { update } = useSession();
   const [username, setUsername] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -82,7 +82,7 @@ export function SetupUsernameForm() {
       }
 
       await update();
-      window.location.href = "/dashboard";
+      window.location.href = redirectTo;
     } catch {
       toast.error("Failed to set username");
     } finally {
