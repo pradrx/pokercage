@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CreditCard, Crown, MoreVertical, Trash2 } from "lucide-react";
+import { CreditCard, Crown, MoreVertical, ShieldCheck, ShieldMinus, Trash2 } from "lucide-react";
 import type { GroupMemberWithUser } from "@/lib/types";
 import type { GroupRole } from "@/generated/prisma/client";
 import { getMemberDisplayName, getMemberFullName } from "@/lib/username";
@@ -68,6 +68,10 @@ export function MemberList({
   // Transfer ownership state
   const [transferTarget, setTransferTarget] = useState<GroupMemberWithUser | null>(null);
   const [transferring, setTransferring] = useState(false);
+
+  // Role change state
+  const [roleChangeTarget, setRoleChangeTarget] = useState<GroupMemberWithUser | null>(null);
+  const [changingRole, setChangingRole] = useState(false);
 
   function openEditPayment(member: GroupMemberWithUser) {
     setEditVenmo(member.venmo ?? "");
@@ -154,6 +158,36 @@ export function MemberList({
     }
   }
 
+  async function handleChangeRole() {
+    if (!roleChangeTarget) return;
+    const newRole = roleChangeTarget.role === "ADMIN" ? "MEMBER" : "ADMIN";
+    setChangingRole(true);
+    try {
+      const res = await fetch(
+        `/api/groups/${groupId}/members/${roleChangeTarget.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: newRole }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to change role");
+        return;
+      }
+      toast.success(
+        newRole === "ADMIN" ? "Promoted to Admin" : "Demoted to Member"
+      );
+      setRoleChangeTarget(null);
+      router.refresh();
+    } catch {
+      toast.error("Failed to change role");
+    } finally {
+      setChangingRole(false);
+    }
+  }
+
   return (
     <>
       <div className="divide-y divide-border rounded-lg border">
@@ -163,6 +197,8 @@ export function MemberList({
           const fullName = getMemberFullName(member);
           const canRemove = isAdmin && member.role !== "OWNER" && member.id !== myMemberId;
           const canEditPayment = isAdmin && isGuest;
+          const canChangeRole =
+            isOwner && !isGuest && member.role !== "OWNER" && member.id !== myMemberId;
           const canTransfer =
             isOwner && !isGuest && member.id !== myMemberId;
 
@@ -204,7 +240,7 @@ export function MemberList({
                 </div>
               </div>
 
-              {(canEditPayment || canRemove || canTransfer) && (
+              {(canEditPayment || canRemove || canChangeRole || canTransfer) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     render={
@@ -222,6 +258,23 @@ export function MemberList({
                         Edit Payment Info
                       </DropdownMenuItem>
                     )}
+                    {canChangeRole && (
+                      <DropdownMenuItem
+                        onClick={() => setRoleChangeTarget(member)}
+                      >
+                        {member.role === "ADMIN" ? (
+                          <>
+                            <ShieldMinus className="mr-2 h-4 w-4" />
+                            Demote to Member
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="mr-2 h-4 w-4" />
+                            Make Admin
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    )}
                     {canRemove && (
                       <DropdownMenuItem
                         onClick={() => setRemoveTarget(member)}
@@ -231,7 +284,7 @@ export function MemberList({
                         Remove
                       </DropdownMenuItem>
                     )}
-                    {(canEditPayment || canRemove) && canTransfer && <DropdownMenuSeparator />}
+                    {(canEditPayment || canRemove || canChangeRole) && canTransfer && <DropdownMenuSeparator />}
                     {canTransfer && (
                       <DropdownMenuItem
                         onClick={() => setTransferTarget(member)}
@@ -339,6 +392,59 @@ export function MemberList({
               disabled={removing}
             >
               {removing ? "Removing..." : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Change Dialog */}
+      <Dialog
+        open={roleChangeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRoleChangeTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {roleChangeTarget?.role === "ADMIN"
+                ? "Demote to Member"
+                : "Make Admin"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {roleChangeTarget?.role === "ADMIN" ? (
+              <>
+                Are you sure you want to demote{" "}
+                <span className="font-medium text-foreground">
+                  {roleChangeTarget ? getMemberDisplayName(roleChangeTarget) : ""}
+                </span>{" "}
+                to Member?
+              </>
+            ) : (
+              <>
+                Are you sure you want to make{" "}
+                <span className="font-medium text-foreground">
+                  {roleChangeTarget ? getMemberDisplayName(roleChangeTarget) : ""}
+                </span>{" "}
+                an Admin? Admins can manage games and members.
+              </>
+            )}
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRoleChangeTarget(null)}
+              disabled={changingRole}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleChangeRole} disabled={changingRole}>
+              {changingRole
+                ? "Saving..."
+                : roleChangeTarget?.role === "ADMIN"
+                  ? "Demote"
+                  : "Make Admin"}
             </Button>
           </DialogFooter>
         </DialogContent>
