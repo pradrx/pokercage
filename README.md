@@ -1,12 +1,12 @@
-# Poker Cage
+# pokercage
 
-Poker Cage is a web app for tracking poker home game finances. Create a group for your regular game, invite your players, and let the app handle the bookkeeping — buyins, cashouts, balances, and who owes whom at the end of the night.
+pokercage is a web app for tracking poker home game finances. Create a group for your regular game, invite your players, and let the app handle the bookkeeping — buyins, cashouts, balances, and who owes whom at the end of the night.
 
 ### Features
 
 - **Groups** — Organize your poker crew. Invite players via shareable links and manage roles (owner, admin, member).
 - **Live ledger** — Track buyins and cashouts in real time as the game plays out.
-- **Automatic payouts** — When the game ends, Poker Cage calculates the optimal settlement so everyone knows exactly who to request money from and how much.
+- **Automatic payouts** — When the game ends, pokercage calculates the optimal settlement so everyone knows exactly who to request money from and how much.
 - **Payment info** — Players can store their Venmo, Zelle, Cash App, or PayPal handles so settling up is one tap away.
 - **Shareable results** — Mark a game as public and share the link with anyone, no account required.
 - **Game history** — Full event log of every buyin, cashout, and settlement for each session.
