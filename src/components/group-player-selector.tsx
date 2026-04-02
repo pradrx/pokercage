@@ -6,6 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UserPlus } from "lucide-react";
 import type { GroupMemberWithUser } from "@/lib/types";
 import { getMemberDisplayName } from "@/lib/username";
@@ -22,6 +32,7 @@ export function GroupPlayerSelector({
   onAddGuest?: (name: string) => void;
 }) {
   const [newName, setNewName] = useState("");
+  const [pendingName, setPendingName] = useState<string | null>(null);
 
   function toggleMember(memberId: string) {
     const next = new Set(selectedIds);
@@ -39,6 +50,18 @@ export function GroupPlayerSelector({
 
   function selectNone() {
     onSelectionChange(new Set());
+  }
+
+  function handleAddGuest() {
+    if (!newName.trim()) return;
+    setPendingName(newName.trim());
+  }
+
+  function handleConfirm() {
+    if (!pendingName || !onAddGuest) return;
+    onAddGuest(pendingName);
+    setPendingName(null);
+    setNewName("");
   }
 
   const allSelected = members.length > 0 && selectedIds.size === members.length;
@@ -91,36 +114,55 @@ export function GroupPlayerSelector({
       </div>
 
       {onAddGuest && (
-        <div className="flex gap-2">
-          <Input
-            placeholder="Add someone new..."
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newName.trim()) {
-                e.preventDefault();
-                onAddGuest(newName.trim());
-                setNewName("");
-              }
-            }}
-            className="text-sm"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!newName.trim()}
-            onClick={() => {
-              if (newName.trim()) {
-                onAddGuest(newName.trim());
-                setNewName("");
-              }
+        <>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Add someone new..."
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newName.trim()) {
+                  e.preventDefault();
+                  handleAddGuest();
+                }
+              }}
+              className="text-sm"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!newName.trim()}
+              onClick={handleAddGuest}
+            >
+              <UserPlus className="mr-1 h-3.5 w-3.5" />
+              Add
+            </Button>
+          </div>
+
+          <AlertDialog
+            open={!!pendingName}
+            onOpenChange={(open) => {
+              if (!open) setPendingName(null);
             }}
           >
-            <UserPlus className="mr-1 h-3.5 w-3.5" />
-            Add
-          </Button>
-        </div>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Add Guest</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will create a guest named &ldquo;{pendingName}&rdquo; in
+                  your group.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirm}>
+                  Add Guest
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
       )}
     </div>
   );

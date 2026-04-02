@@ -56,6 +56,21 @@ export async function POST(
     playerName = name.trim();
     displayName = playerName;
 
+    // Check for duplicate guest name in the group
+    const existingGuest = await prisma.groupMember.findFirst({
+      where: {
+        groupId: game.groupId,
+        userId: null,
+        name: { equals: playerName, mode: "insensitive" },
+      },
+    });
+    if (existingGuest) {
+      return NextResponse.json(
+        { error: `A guest named "${existingGuest.name}" already exists in this group` },
+        { status: 409 }
+      );
+    }
+
     // Auto-create a guest member in the group
     const newMember = await prisma.groupMember.create({
       data: {

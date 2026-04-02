@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Poker Cage",
+  title: "pokercage",
   description: "Track buyins, cashouts, and payouts for your poker home games.",
 };
 

@@ -66,6 +66,20 @@ export async function POST(
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
+  const existingGuest = await prisma.groupMember.findFirst({
+    where: {
+      groupId,
+      userId: null,
+      name: { equals: name.trim(), mode: "insensitive" },
+    },
+  });
+  if (existingGuest) {
+    return NextResponse.json(
+      { error: `A guest named "${existingGuest.name}" already exists in this group` },
+      { status: 409 }
+    );
+  }
+
   const member = await prisma.groupMember.create({
     data: {
       name: name.trim(),
