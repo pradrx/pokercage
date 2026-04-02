@@ -2,12 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireGroupAdmin, AuthError } from "@/lib/auth-helpers";
-import { customAlphabet } from "nanoid";
-
-const generateCode = customAlphabet(
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-  12
-);
+import { generateUniqueInviteSlug } from "@/lib/slug";
 
 export async function GET(
   _request: Request,
@@ -80,7 +75,7 @@ export async function POST(
 
     return tx.groupInvite.create({
       data: {
-        code: generateCode(),
+        code: await generateUniqueInviteSlug(),
         groupId,
         createdBy: userId,
         expiresAt,

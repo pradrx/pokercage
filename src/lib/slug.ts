@@ -23,3 +23,22 @@ export async function generateUniqueGameSlug(): Promise<string> {
   }
   throw new Error("Failed to generate unique slug after 5 attempts");
 }
+
+export function generateInviteSlug(): string {
+  return uniqueNamesGenerator({
+    dictionaries: [adjectives, colors, animals],
+    separator: "",
+    style: "lowerCase",
+  });
+}
+
+export async function generateUniqueInviteSlug(): Promise<string> {
+  for (let i = 0; i < 5; i++) {
+    const slug = generateInviteSlug();
+    const existing = await prisma.groupInvite.findFirst({
+      where: { code: slug },
+    });
+    if (!existing) return slug;
+  }
+  throw new Error("Failed to generate unique invite slug after 5 attempts");
+}
