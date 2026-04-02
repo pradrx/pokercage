@@ -50,6 +50,12 @@ export async function canViewGame(
   return membership !== null;
 }
 
+export function requireUsername(session: { user?: { username?: string | null } }): void {
+  if (!session.user?.username) {
+    throw new AuthError("Username setup required", 403);
+  }
+}
+
 export class AuthError extends Error {
   status: number;
   constructor(message: string, status: number) {

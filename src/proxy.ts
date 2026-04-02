@@ -23,15 +23,16 @@ export const proxy = auth((req) => {
 
   // Only enforce username setup for authenticated users
   if (req.auth?.user) {
-    // Fast check: cookie set when username is created
-    const hasUsernameCookie = req.cookies.get("has_username")?.value === "1";
-    if (hasUsernameCookie) {
+    if (req.auth.user.username) {
       return NextResponse.next();
     }
 
-    // Fallback: check session (covers users who already had a username before cookie existed)
-    if (req.auth.user.username) {
-      return NextResponse.next();
+    // No username set — block access
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Username setup required" },
+        { status: 403 }
+      );
     }
 
     const setupUrl = new URL("/setup-username", req.url);

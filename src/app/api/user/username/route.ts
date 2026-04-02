@@ -56,13 +56,5 @@ export async function POST(req: Request) {
     throw e;
   }
 
-  const response = NextResponse.json({ username: rawUsername });
-  response.cookies.set("has_username", "1", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
-  return response;
+  return NextResponse.json({ username: rawUsername });
 }

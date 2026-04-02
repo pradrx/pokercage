@@ -48,18 +48,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: isDevAuth ? "jwt" : "database",
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
       if (user?.id) {
         token.sub = user.id;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { username: true },
-        });
-        token.username = dbUser?.username ?? null;
       }
-      if (trigger === "update") {
+      if (token.sub) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: token.sub! },
+          where: { id: token.sub },
           select: { username: true },
         });
         token.username = dbUser?.username ?? null;
