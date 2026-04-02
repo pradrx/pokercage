@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { createGameEvent, actorDisplayName } from "@/lib/game-events";
 import { formatUsername } from "@/lib/username";
 import { requireGroupAdmin, AuthError } from "@/lib/auth-helpers";
+import { generateUniqueGameSlug } from "@/lib/slug";
 
 export async function GET() {
   const session = await auth();
@@ -71,12 +72,15 @@ export async function POST(request: Request) {
     }
   }
 
+  const slug = await generateUniqueGameSlug();
+
   const game = await prisma.game.create({
     data: {
       name,
       date: new Date(date),
       userId: session.user.id,
       groupId,
+      slug,
       players: playersCreate.length > 0
         ? { create: playersCreate }
         : undefined,

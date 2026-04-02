@@ -81,7 +81,7 @@ export function CreateGroupGameDialog({
       setOpen(false);
       setName("");
       setSelectedIds(new Set());
-      router.push(`/games/${game.id}`);
+      router.push(`/games/${game.slug ?? game.id}`);
     } catch {
       toast.error("Failed to create game");
     } finally {

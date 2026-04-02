@@ -35,25 +35,27 @@ export default async function GamePage({
 
   const { gameId } = await params;
 
-  const game = (await prisma.game.findUnique({
-    where: { id: gameId },
-    include: {
-      players: {
-        include: {
-          buyins: { orderBy: { createdAt: "asc" } },
-          groupMember: {
-            select: {
-              userId: true,
-              venmo: true, zelle: true, cashapp: true, paypal: true,
-              user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
-            },
+  const include = {
+    players: {
+      include: {
+        buyins: { orderBy: { createdAt: "asc" as const } },
+        groupMember: {
+          select: {
+            userId: true,
+            venmo: true, zelle: true, cashapp: true, paypal: true,
+            user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
           },
         },
       },
-      events: { orderBy: { createdAt: "desc" } },
-      group: true,
     },
-  })) as (GameWithPlayersAndEvents & { group: { id: string; name: string } }) | null;
+    events: { orderBy: { createdAt: "desc" as const } },
+    group: true,
+  };
+
+  const game = (
+    await prisma.game.findUnique({ where: { slug: gameId }, include }) ??
+    await prisma.game.findUnique({ where: { id: gameId }, include })
+  ) as (GameWithPlayersAndEvents & { group: { id: string; name: string } }) | null;
 
   if (!game) {
     notFound();
@@ -134,7 +136,7 @@ export default async function GamePage({
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <ShareLinkButton shareToken={game.shareToken} />
+            <ShareLinkButton shareToken={game.shareToken} slug={game.slug} />
             {canEdit && <CompleteGameDialog game={game} />}
             {canReopen && <ReopenGameDialog gameId={game.id} />}
           </div>

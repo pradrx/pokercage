@@ -61,6 +61,7 @@ export default async function DashboardPage() {
         where: { groupId: { in: groupIds }, status: "ACTIVE" },
         select: {
           id: true,
+          slug: true,
           name: true,
           groupId: true,
           players: { select: { id: true } },

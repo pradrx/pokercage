@@ -111,7 +111,7 @@ export function CreateGameDialog({ groups = [] }: { groups?: GroupOption[] }) {
 
       const game = await res.json();
       setOpen(false);
-      router.push(`/games/${game.id}`);
+      router.push(`/games/${game.slug ?? game.id}`);
     } catch {
       toast.error("Failed to create game");
     } finally {

@@ -138,6 +138,7 @@ enum GameEventType {
 
 model Game {
   id         String     @id @default(cuid())
+  slug       String?    @unique
   name       String
   date       DateTime
   status     GameStatus @default(ACTIVE)

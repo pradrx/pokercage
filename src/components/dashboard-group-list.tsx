@@ -19,6 +19,7 @@ type GroupItem = {
 
 type ActiveGameItem = {
   id: string;
+  slug: string | null;
   name: string;
   players: { id: string }[];
 };
@@ -82,7 +83,7 @@ export function DashboardGroupList({
                     </p>
                     <div className="space-y-1.5">
                       {activeGames.map((game) => (
-                        <Link key={game.id} href={`/games/${game.id}`} className="block">
+                        <Link key={game.id} href={`/games/${game.slug ?? game.id}`} className="block">
                           <div className="flex items-center justify-between text-sm hover:text-foreground transition-colors">
                             <span>{game.name}</span>
                             <span className="text-xs text-muted-foreground">

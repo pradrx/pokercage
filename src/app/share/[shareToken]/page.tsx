@@ -22,25 +22,27 @@ export default async function SharePage({
 }) {
   const { shareToken } = await params;
 
-  const game = (await prisma.game.findUnique({
-    where: { shareToken },
-    include: {
-      players: {
-        include: {
-          buyins: { orderBy: { createdAt: "asc" } },
-          groupMember: {
-            select: {
-              userId: true,
-              venmo: true, zelle: true, cashapp: true, paypal: true,
-              user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
-            },
+  const include = {
+    players: {
+      include: {
+        buyins: { orderBy: { createdAt: "asc" as const } },
+        groupMember: {
+          select: {
+            userId: true,
+            venmo: true, zelle: true, cashapp: true, paypal: true,
+            user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
           },
         },
       },
-      events: { orderBy: { createdAt: "desc" } },
-      user: { select: { name: true, username: true } },
     },
-  })) as (GameWithPlayersAndEvents & { user: { name: string | null; username: string | null } }) | null;
+    events: { orderBy: { createdAt: "desc" as const } },
+    user: { select: { name: true, username: true } },
+  };
+
+  const game = (
+    await prisma.game.findUnique({ where: { slug: shareToken }, include }) ??
+    await prisma.game.findUnique({ where: { shareToken }, include })
+  ) as (GameWithPlayersAndEvents & { user: { name: string | null; username: string | null } }) | null;
 
   if (!game) {
     notFound();

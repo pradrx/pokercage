@@ -19,7 +19,7 @@ export function GameList({ games }: { games: GameWithPlayers[] }) {
     <div className="grid gap-4">
       {games.map((game) => {
         return (
-          <Link key={game.id} href={`/games/${game.id}`}>
+          <Link key={game.id} href={`/games/${game.slug ?? game.id}`}>
             <Card className="transition-colors hover:border-primary/50">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base">{game.name}</CardTitle>

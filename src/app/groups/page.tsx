@@ -56,6 +56,7 @@ export default async function GroupsPage({
         where: { groupId: { in: groupIds }, status: "ACTIVE" },
         select: {
           id: true,
+          slug: true,
           name: true,
           groupId: true,
           players: { select: { id: true } },

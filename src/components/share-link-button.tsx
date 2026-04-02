@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Link2 } from "lucide-react";
 
-export function ShareLinkButton({ shareToken }: { shareToken: string }) {
+export function ShareLinkButton({ shareToken, slug }: { shareToken: string; slug?: string | null }) {
   function handleCopy() {
-    const url = `${window.location.origin}/share/${shareToken}`;
+    const url = `${window.location.origin}/share/${slug ?? shareToken}`;
     navigator.clipboard.writeText(url);
     toast.success("Share link copied to clipboard");
   }
