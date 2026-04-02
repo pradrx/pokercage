@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Navbar } from "@/components/navbar";
 import { LedgerTable } from "@/components/ledger-table";
@@ -8,11 +8,12 @@ import { GroupGameAddPlayer } from "@/components/group-game-add-player";
 import { CompleteGameDialog } from "@/components/complete-game-dialog";
 import { ReopenGameDialog } from "@/components/reopen-game-dialog";
 import { PayoutList } from "@/components/payout-list";
-import { ShareLinkButton } from "@/components/share-link-button";
+import { VisibilityToggle } from "@/components/visibility-toggle";
 import { GameHistory } from "@/components/game-history";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { CageIcon } from "@/components/cage-icon";
 import {
   calculatePayouts,
   adjustBalances,
@@ -20,8 +21,24 @@ import {
 } from "@/lib/payout";
 import { buildPaymentInfoMap } from "@/lib/payment";
 import { canViewGame, canEditGame } from "@/lib/auth-helpers";
-import { getDisplayName, buildFullNameMap } from "@/lib/username";
+import { getDisplayName, formatUsername, buildFullNameMap } from "@/lib/username";
 import type { GameWithPlayersAndEvents, GroupMemberWithUser } from "@/lib/types";
+
+const playerInclude = {
+  players: {
+    include: {
+      buyins: { orderBy: { createdAt: "asc" as const } },
+      groupMember: {
+        select: {
+          userId: true,
+          venmo: true, zelle: true, cashapp: true, paypal: true,
+          user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
+        },
+      },
+    },
+  },
+  events: { orderBy: { createdAt: "desc" as const } },
+};
 
 export default async function GamePage({
   params,
@@ -29,38 +46,36 @@ export default async function GamePage({
   params: Promise<{ gameId: string }>;
 }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect("/");
-  }
-
   const { gameId } = await params;
 
+  // Fetch game with user info for public view's "Hosted by"
   const include = {
-    players: {
-      include: {
-        buyins: { orderBy: { createdAt: "asc" as const } },
-        groupMember: {
-          select: {
-            userId: true,
-            venmo: true, zelle: true, cashapp: true, paypal: true,
-            user: { select: { username: true, name: true, venmo: true, zelle: true, cashapp: true, paypal: true } },
-          },
-        },
-      },
-    },
-    events: { orderBy: { createdAt: "desc" as const } },
+    ...playerInclude,
     group: true,
+    user: { select: { name: true, username: true } },
   };
 
   const game = (
     await prisma.game.findUnique({ where: { slug: gameId }, include }) ??
     await prisma.game.findUnique({ where: { id: gameId }, include })
-  ) as (GameWithPlayersAndEvents & { group: { id: string; name: string } }) | null;
+  ) as (GameWithPlayersAndEvents & {
+    group: { id: string; name: string };
+    user: { name: string | null; username: string | null };
+  }) | null;
 
   if (!game) {
     notFound();
   }
 
+  // Unauthenticated access: only allowed for public games
+  if (!session?.user?.id) {
+    if (!game.isPublic) {
+      notFound();
+    }
+    return <PublicGameView game={game} />;
+  }
+
+  // Authenticated access: require group membership
   const hasViewAccess = await canViewGame(game, session.user.id);
   if (!hasViewAccess) {
     notFound();
@@ -88,7 +103,6 @@ export default async function GamePage({
       },
       orderBy: { createdAt: "asc" },
     });
-    // Filter out members already in this game
     const existingMemberIds = new Set(
       game.players
         .map((p) => p.groupMemberId)
@@ -136,7 +150,9 @@ export default async function GamePage({
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <ShareLinkButton shareToken={game.shareToken} slug={game.slug} />
+            {hasEditAccess && (
+              <VisibilityToggle gameId={game.id} isPublic={game.isPublic} slug={game.slug} />
+            )}
             {canEdit && <CompleteGameDialog game={game} />}
             {canReopen && <ReopenGameDialog gameId={game.id} />}
           </div>
@@ -191,6 +207,96 @@ export default async function GamePage({
 
         <Separator className="my-6" />
         <GameHistory events={game.events} />
+      </div>
+    </>
+  );
+}
+
+function PublicGameView({
+  game,
+}: {
+  game: GameWithPlayersAndEvents & {
+    user: { name: string | null; username: string | null };
+  };
+}) {
+  const isCompleted = game.status === "COMPLETED";
+
+  const displayPlayers = game.players.map((p) => ({
+    ...p,
+    name: getDisplayName(p),
+  }));
+  const rawBalances = buildPlayerBalances(displayPlayers);
+  const adjustmentResult = adjustBalances(rawBalances);
+  const wasAdjusted = Math.abs(adjustmentResult.delta) >= 0.01;
+  const payouts = isCompleted
+    ? calculatePayouts(adjustmentResult.adjusted)
+    : [];
+
+  const paymentInfoMap = buildPaymentInfoMap(displayPlayers);
+  const fullNameMap = buildFullNameMap(game.players);
+
+  return (
+    <>
+      <header className="border-b border-border">
+        <div className="mx-auto flex h-14 max-w-5xl items-center px-4">
+          <Link href="/" className="flex items-center gap-1.5 text-lg font-bold tracking-tight">
+            <CageIcon className="h-6 w-6" />
+            pokercage
+          </Link>
+        </div>
+      </header>
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">{game.name}</h1>
+          <Badge variant={isCompleted ? "secondary" : "default"}>
+            {isCompleted ? "Completed" : "In Progress"}
+          </Badge>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {new Date(game.date).toLocaleDateString()}
+          {(game.user.username || game.user.name) &&
+            ` \u00b7 Hosted by ${game.user.username ? formatUsername(game.user.username) : game.user.name}`}
+        </p>
+
+        <Separator className="my-6" />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ledger</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <LedgerTable game={game} editable={false} />
+          </CardContent>
+        </Card>
+
+        {isCompleted && payouts.length > 0 && (
+          <>
+            <Separator className="my-6" />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Payouts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {wasAdjusted && (
+                  <p className="mb-3 text-sm text-muted-foreground">
+                    Balances were proportionally adjusted to account for a
+                    ledger imbalance of{" "}
+                    {adjustmentResult.delta > 0 ? "+" : ""}
+                    {adjustmentResult.delta}.
+                  </p>
+                )}
+                <PayoutList payouts={payouts} paymentInfoMap={paymentInfoMap} fullNameMap={fullNameMap} />
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        <Separator className="my-6" />
+        <GameHistory events={game.events} />
+
+        <p className="mt-8 text-center text-xs text-muted-foreground">
+          Poker Cage
+        </p>
       </div>
     </>
   );

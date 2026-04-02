@@ -8,10 +8,6 @@ export async function GET(
   { params }: { params: Promise<{ gameId: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { gameId } = await params;
 
   const game = await prisma.game.findUnique({
@@ -25,6 +21,13 @@ export async function GET(
 
   if (!game) {
     return NextResponse.json({ error: "Game not found" }, { status: 404 });
+  }
+
+  if (!session?.user?.id) {
+    if (!game.isPublic) {
+      return NextResponse.json({ error: "Game not found" }, { status: 404 });
+    }
+    return NextResponse.json(game);
   }
 
   const hasAccess = await canViewGame(game, session.user.id);

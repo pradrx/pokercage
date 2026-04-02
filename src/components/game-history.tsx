@@ -11,6 +11,7 @@ import {
   Trash2,
   X,
   DollarSign,
+  Eye,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { GameEvent, GameEventType } from "@/generated/prisma/client";
@@ -29,6 +30,7 @@ const eventConfig: Record<
   CASHOUT_SET: { icon: DollarSign, color: "bg-green-500" },
   CASHOUT_CHANGED: { icon: DollarSign, color: "bg-yellow-500" },
   CASHOUT_CLEARED: { icon: X, color: "bg-red-500" },
+  VISIBILITY_CHANGED: { icon: Eye, color: "bg-blue-500" },
 };
 
 export function GameHistory({ events }: { events: GameEvent[] }) {

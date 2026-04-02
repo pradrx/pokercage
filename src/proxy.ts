@@ -6,7 +6,6 @@ const publicPaths = [
   "/setup-username",
   "/api/auth",
   "/api/user/username",
-  "/share",
 ];
 
 function isPublicPath(pathname: string): boolean {
